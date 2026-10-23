@@ -22,6 +22,29 @@ function displayMenu() {
   console.log('=============================');
 }
 
+// Function to format and display a clean, readable trip summary
+function displayTripSummary(trip) {
+  // Correctly handle singular ("1 day") vs plural ("X days")
+  const dayText = trip.days === 1 ? 'day' : 'days';
+
+  // Format budget in Indian Rupees using toLocaleString with en-IN locale
+  const formattedBudget = trip.budget.toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  });
+
+  console.log('\n========================================');
+  console.log('              TRIP SUMMARY              ');
+  console.log('========================================');
+  console.log(`  Destination : ${trip.destination}`);
+  console.log(`  Duration    : ${trip.days} ${dayText}`);
+  console.log(`  Budget      : ${formattedBudget}`);
+  console.log(`  Interests   : ${trip.interests.join(', ')}`);
+  console.log('========================================');
+  console.log('Trip created successfully!');
+}
+
 // Function to collect and validate trip details step by step
 function createTrip() {
   console.log('\n--- Create a New Trip ---');
@@ -94,13 +117,8 @@ function createTrip() {
       // Store the trip in the in-memory array
       trips.push(newTrip);
 
-      // Display the trip summary
-      console.log('\n--- Trip Summary ---');
-      console.log(`Destination : ${newTrip.destination}`);
-      console.log(`Days        : ${newTrip.days}`);
-      console.log(`Budget (₹)  : ₹${newTrip.budget}`);
-      console.log(`Interests   : ${newTrip.interests.join(', ')}`);
-      console.log('--------------------');
+      // Display the formatted trip summary
+      displayTripSummary(newTrip);
 
       // Return to the main menu
       promptUser();
