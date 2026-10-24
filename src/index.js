@@ -22,17 +22,22 @@ function displayMenu() {
   console.log('=============================');
 }
 
+// Helper function to format numbers into Indian Rupee currency format (INR)
+function formatCurrency(amount) {
+  return amount.toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  });
+}
+
 // Function to format and display a clean, readable trip summary
 function displayTripSummary(trip) {
   // Correctly handle singular ("1 day") vs plural ("X days")
   const dayText = trip.days === 1 ? 'day' : 'days';
 
-  // Format budget in Indian Rupees using toLocaleString with en-IN locale
-  const formattedBudget = trip.budget.toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  });
+  // Format budget in Indian Rupees using formatCurrency helper
+  const formattedBudget = formatCurrency(trip.budget);
 
   console.log('\n========================================');
   console.log('              TRIP SUMMARY              ');
@@ -215,6 +220,77 @@ function displayItinerary(trip) {
   console.log('\n========================================');
 }
 
+// Baseline estimation rate constants (in INR) used for illustrative budget calculations
+const BUDGET_ESTIMATION_RATES = {
+  TRANSPORT_FIXED: 2000,        // Fixed estimated transport / travel allowance per trip
+  ACCOMMODATION_PER_DAY: 1500,  // Estimated stay / lodging cost per day
+  FOOD_PER_DAY: 1000,           // Estimated meal & dining cost per day
+  ACTIVITIES_PER_DAY: 500,      // Estimated sightseeing & activity cost per day
+};
+
+// Function to calculate estimated trip expenses based on the number of days
+function calculateEstimatedBudget(days) {
+  const transport = BUDGET_ESTIMATION_RATES.TRANSPORT_FIXED;
+  const accommodation = BUDGET_ESTIMATION_RATES.ACCOMMODATION_PER_DAY * days;
+  const food = BUDGET_ESTIMATION_RATES.FOOD_PER_DAY * days;
+  const activities = BUDGET_ESTIMATION_RATES.ACTIVITIES_PER_DAY * days;
+  const total = transport + accommodation + food + activities;
+
+  return {
+    transport,
+    accommodation,
+    food,
+    activities,
+    total,
+  };
+}
+
+// Function to format and display the estimated budget breakdown and comparison
+function displayBudgetBreakdown(trip) {
+  const estimated = trip.estimatedBudget || calculateEstimatedBudget(trip.days);
+  const plannedBudget = trip.budget;
+  const estimatedTotal = estimated.total;
+  const difference = plannedBudget - estimatedTotal;
+  const isWithinBudget = difference >= 0;
+
+  console.log('\n========================================');
+  console.log('        ESTIMATED TRIP BUDGET           ');
+  console.log('========================================');
+  console.log(`  Destination               : ${trip.destination}`);
+  console.log(`  Duration                  : ${trip.days} ${trip.days === 1 ? 'day' : 'days'}`);
+  console.log('  Note                      : Illustrative estimates only (not guaranteed prices)');
+  console.log('----------------------------------------');
+  console.log('  Expense Breakdown:');
+  console.log(`    • Transport (Fixed)     : ${formatCurrency(estimated.transport)}`);
+  console.log(`    • Accommodation         : ${formatCurrency(estimated.accommodation)} (${formatCurrency(BUDGET_ESTIMATION_RATES.ACCOMMODATION_PER_DAY)}/day)`);
+  console.log(`    • Food                  : ${formatCurrency(estimated.food)} (${formatCurrency(BUDGET_ESTIMATION_RATES.FOOD_PER_DAY)}/day)`);
+  console.log(`    • Activities            : ${formatCurrency(estimated.activities)} (${formatCurrency(BUDGET_ESTIMATION_RATES.ACTIVITIES_PER_DAY)}/day)`);
+  console.log('----------------------------------------');
+  console.log(`  Total Estimated Cost      : ${formatCurrency(estimatedTotal)}`);
+  console.log(`  User's Planned Budget     : ${formatCurrency(plannedBudget)}`);
+  console.log('----------------------------------------');
+
+  // Budget status and remaining / over-budget calculation
+  if (isWithinBudget) {
+    console.log(`  Budget Status             : Within Budget`);
+    console.log(`  Remaining Budget          : ${formatCurrency(difference)}`);
+  } else {
+    const overBudget = Math.abs(difference);
+    console.log(`  Budget Status             : Over Budget`);
+    console.log(`  Amount Over Budget        : ${formatCurrency(overBudget)}`);
+  }
+
+  // Percentage of budget used, where meaningful
+  if (plannedBudget > 0) {
+    const percentageUsed = ((estimatedTotal / plannedBudget) * 100).toFixed(1);
+    console.log(`  Percentage of Budget Used : ${percentageUsed}%`);
+  } else {
+    console.log(`  Percentage of Budget Used : N/A (Planned budget is ₹0.00)`);
+  }
+
+  console.log('========================================');
+}
+
 // Function to collect and validate trip details step by step
 function createTrip() {
   console.log('\n--- Create a New Trip ---');
@@ -287,6 +363,9 @@ function createTrip() {
       // Generate and attach day-by-day itinerary to the trip object
       newTrip.itinerary = generateItinerary(newTrip);
 
+      // Calculate and attach estimated budget breakdown
+      newTrip.estimatedBudget = calculateEstimatedBudget(newTrip.days);
+
       // Store the trip in the in-memory array
       trips.push(newTrip);
 
@@ -295,6 +374,9 @@ function createTrip() {
 
       // Display the generated day-by-day itinerary
       displayItinerary(newTrip);
+
+      // Display the estimated budget breakdown and comparison
+      displayBudgetBreakdown(newTrip);
 
       // Return to the main menu
       promptUser();

@@ -15,11 +15,40 @@ A lightweight, beginner-friendly command-line application built with JavaScript 
 The project will be built incrementally and will include the following capabilities:
 
 - **Trip Creation:** Define trip details such as destination, dates, and travelers.
-- **Day-by-Day Itinerary Generation:** Plan daily activities, schedules, and sightseeing stops.
-- **Budget Calculation:** Track estimated expenses (travel, lodging, food, activities) and calculate total trip costs.
+- **Day-by-Day Itinerary Generation:** Plan daily activities, schedules, and sightseeing stops based on interests.
+- **Budget Calculation (Implemented in Commit 7):** Track estimated expenses across transport, lodging, food, and activities, and compare against user's planned budget.
 - **Packing Checklist:** Create and manage customized packing lists so nothing gets left behind.
 - **Saving & Viewing Trips:** Store trips locally and view summaries of past or upcoming journeys.
 - **Exporting Itineraries:** Export generated itineraries into readable plain text (`.txt`) files.
+
+---
+
+## 💰 Trip Budget Calculator
+
+The application includes an automated trip expense estimator that calculates an illustrative budget breakdown based on trip duration:
+
+### Baseline Estimation Rates (INR)
+- **Transport (Fixed):** ₹2,000 (Base travel & transit allowance per trip)
+- **Accommodation:** ₹1,500 / day (Lodging & stay)
+- **Food:** ₹1,000 / day (Meals & dining)
+- **Activities:** ₹500 / day (Sightseeing & entry tickets)
+
+### Estimation Formula
+$$\text{Total Estimated Cost} = \text{Transport (Fixed)} + [(\text{Accommodation/Day} + \text{Food/Day} + \text{Activities/Day}) \times \text{Days}]$$
+
+For example, for a **3-day trip**:
+- Transport = ₹2,000
+- Accommodation = 3 × ₹1,500 = ₹4,500
+- Food = 3 × ₹1,000 = ₹3,000
+- Activities = 3 × ₹500 = ₹1,500
+- **Total Estimated Cost:** ₹2,000 + ₹4,500 + ₹3,000 + ₹1,500 = **₹11,000.00**
+
+### Budget Comparison
+- **Within Budget:** If User Budget $\ge$ Estimated Cost, displays the **Remaining Budget** and **Percentage of Budget Used**.
+- **Over Budget:** If Estimated Cost $>$ User Budget, displays the **Amount Over Budget** and **Percentage of Budget Used**.
+- **Zero Budget Handling:** When a user enters ₹0, the application cleanly displays the full estimated cost as over budget without division-by-zero errors.
+
+> **Disclaimer:** All expense estimates are illustrative baseline approximations intended for planning demonstrations. They are not live market prices or guaranteed commercial rates.
 
 ---
 
