@@ -1,5 +1,7 @@
-// Import the built-in readline module to handle terminal input/output
+// Import built-in modules to handle terminal I/O, file system, and paths
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 
 // Create a readline interface connected to standard input (keyboard) and standard output (terminal)
 const rl = readline.createInterface({
@@ -7,11 +9,79 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-// In-memory storage for trips created during the application session
+// Storage paths for persistent JSON trip data
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const TRIPS_FILE_PATH = path.join(DATA_DIR, 'trips.json');
+
+// In-memory storage for trips created during or loaded into the application session
 const trips = [];
 
 // In-memory storage for packing checklist items
 const packingItems = [];
+
+// Flag to track if the storage file exists but contains invalid/corrupted data
+let isStorageCorrupted = false;
+
+// Helper function to ensure the data directory exists
+function ensureDataDirectoryExists() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+// Function to safely load saved trips from local JSON file
+function loadTrips() {
+  try {
+    ensureDataDirectoryExists();
+
+    // If file does not exist, initialize it with an empty array
+    if (!fs.existsSync(TRIPS_FILE_PATH)) {
+      fs.writeFileSync(TRIPS_FILE_PATH, JSON.stringify([], null, 2), 'utf8');
+      return [];
+    }
+
+    const rawData = fs.readFileSync(TRIPS_FILE_PATH, 'utf8');
+
+    // Handle empty file gracefully
+    if (!rawData.trim()) {
+      return [];
+    }
+
+    const parsed = JSON.parse(rawData);
+
+    if (!Array.isArray(parsed)) {
+      isStorageCorrupted = true;
+      console.error(`\n[Storage Warning] "${TRIPS_FILE_PATH}" does not contain a valid JSON array.`);
+      console.error('To prevent data loss, automatic saving is disabled until the file is fixed.\n');
+      return [];
+    }
+
+    return parsed;
+  } catch (error) {
+    isStorageCorrupted = true;
+    console.error(`\n[Storage Error] Failed to read or parse "${TRIPS_FILE_PATH}": ${error.message}`);
+    console.error('To prevent overwriting existing data, automatic saving is disabled until the file is fixed.\n');
+    return [];
+  }
+}
+
+// Function to safely save trips to local JSON file
+function saveTrips() {
+  if (isStorageCorrupted) {
+    console.error(`\n[Storage Warning] Cannot save to "${TRIPS_FILE_PATH}" because the existing file contains invalid JSON.`);
+    console.error('The trip was added to this session in memory, but the file was NOT overwritten to prevent data loss.\n');
+    return false;
+  }
+
+  try {
+    ensureDataDirectoryExists();
+    fs.writeFileSync(TRIPS_FILE_PATH, JSON.stringify(trips, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error(`\n[Storage Error] Failed to write trips to "${TRIPS_FILE_PATH}": ${error.message}\n`);
+    return false;
+  }
+}
 
 // Function to display the main interactive menu options
 function displayMenu() {
@@ -372,6 +442,9 @@ function createTrip() {
       // Store the trip in the in-memory array
       trips.push(newTrip);
 
+      // Save trips to persistent JSON file storage
+      saveTrips();
+
       // Display the formatted trip summary
       displayTripSummary(newTrip);
 
@@ -460,6 +533,42 @@ function addPackingItem() {
   promptItemName();
 }
 
+// Function to format and display all saved trips and their summaries
+function viewSavedTrips() {
+  console.log('\n========================================');
+  console.log('              SAVED TRIPS               ');
+  console.log('========================================');
+
+  if (trips.length === 0) {
+    console.log('No saved trips found.');
+    console.log('Use option 1 from the main menu to create a trip.');
+    console.log('========================================');
+    return;
+  }
+
+  const tripText = trips.length === 1 ? 'trip' : 'trips';
+  console.log(`  Total Saved : ${trips.length} ${tripText}`);
+  console.log('========================================');
+
+  trips.forEach((trip, index) => {
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    const formattedBudget = formatCurrency(trip.budget);
+    const estimatedTotal = trip.estimatedBudget ? formatCurrency(trip.estimatedBudget.total) : 'N/A';
+
+    console.log(`Trip #${index + 1}:`);
+    console.log(`  Destination          : ${trip.destination}`);
+    console.log(`  Duration             : ${trip.days} ${dayText}`);
+    console.log(`  Planned Budget       : ${formattedBudget}`);
+    console.log(`  Total Estimated Cost : ${estimatedTotal}`);
+    console.log(`  Interests            : ${trip.interests.join(', ')}`);
+    if (index < trips.length - 1) {
+      console.log('----------------------------------------');
+    }
+  });
+
+  console.log('========================================');
+}
+
 // Function to select and toggle an item's packed status
 function togglePackingItem() {
   if (packingItems.length === 0) {
@@ -539,7 +648,7 @@ function promptUser() {
         break;
 
       case '2':
-        console.log('\nView Saved Trips feature will be implemented in a future commit.');
+        viewSavedTrips();
         promptUser();
         break;
 
@@ -567,5 +676,13 @@ rl.on('close', () => {
 
 // Initial startup greeting and menu launch
 console.log('Welcome to Travel Planner CLI!');
+
+// Load saved trips from persistent JSON storage at startup
+const savedTrips = loadTrips();
+trips.push(...savedTrips);
+if (savedTrips.length > 0) {
+  console.log(`Loaded ${savedTrips.length} saved ${savedTrips.length === 1 ? 'trip' : 'trips'} from storage.`);
+}
+
 promptUser();
 

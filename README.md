@@ -18,7 +18,7 @@ The project will be built incrementally and will include the following capabilit
 - **Day-by-Day Itinerary Generation:** Plan daily activities, schedules, and sightseeing stops based on interests.
 - **Budget Calculation (Implemented in Commit 7):** Track estimated expenses across transport, lodging, food, and activities, and compare against user's planned budget.
 - **Packing Checklist (Implemented in Commit 8):** Create and manage customized packing lists, track packed/unpacked status, and monitor preparation progress.
-- **Saving & Viewing Trips:** Store trips locally and view summaries of past or upcoming journeys.
+- **Saving & Viewing Trips (Implemented in Commit 9):** Store trips locally in a JSON file, load previous trips on startup, and view all saved trip summaries.
 - **Exporting Itineraries:** Export generated itineraries into readable plain text (`.txt`) files.
 
 ---
@@ -61,6 +61,18 @@ The interactive packing checklist submenu allows travelers to track luggage prep
 2. **Add a packing item:** Prompts for an item name, validates against empty strings, and adds the new item with a default `packed: false` status.
 3. **Mark an item as packed or unpacked:** Allows selecting any item by its number to toggle its packed state. Handles empty lists and invalid indices gracefully.
 4. **Return to the main menu:** Returns cleanly to the primary application menu without losing checklist items stored in-memory.
+
+---
+
+## 💾 Persistent Trip Storage
+
+The application provides local file-based persistent storage using Node.js built-in `fs` and `path` modules:
+
+- **Storage Location:** Trips are persisted in `data/trips.json` formatted as readable JSON. The directory and file are created automatically if they do not exist.
+- **Automatic Saving:** Every newly created trip is immediately persisted to `data/trips.json` with all trip details, day-by-day itineraries, and estimated budget breakdown.
+- **Startup Loading:** On application launch, previously saved trips are automatically read from disk into memory, displaying a summary count of loaded trips.
+- **Viewing Saved Trips:** Option 2 from the main menu lists all saved trips with their destinations, durations, planned budgets, estimated costs, and interests.
+- **Data Protection:** If `data/trips.json` is missing or empty, it initializes cleanly. If the file contains invalid JSON or corrupted data, a clear warning is logged and automatic overwrites are disabled to prevent data loss.
 
 ---
 
@@ -108,6 +120,8 @@ node -v
 
 ```text
 Travel Planner/
+├── data/
+│   └── trips.json     # Saved trip data (auto-generated)
 ├── src/
 │   └── index.js       # Main application entry point
 ├── .gitignore         # Files and directories ignored by Git
