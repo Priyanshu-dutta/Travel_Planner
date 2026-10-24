@@ -17,7 +17,7 @@ The project will be built incrementally and will include the following capabilit
 - **Trip Creation:** Define trip details such as destination, dates, and travelers.
 - **Day-by-Day Itinerary Generation:** Plan daily activities, schedules, and sightseeing stops based on interests.
 - **Budget Calculation (Implemented in Commit 7):** Track estimated expenses across transport, lodging, food, and activities, and compare against user's planned budget.
-- **Packing Checklist:** Create and manage customized packing lists so nothing gets left behind.
+- **Packing Checklist (Implemented in Commit 8):** Create and manage customized packing lists, track packed/unpacked status, and monitor preparation progress.
 - **Saving & Viewing Trips:** Store trips locally and view summaries of past or upcoming journeys.
 - **Exporting Itineraries:** Export generated itineraries into readable plain text (`.txt`) files.
 
@@ -49,6 +49,18 @@ For example, for a **3-day trip**:
 - **Zero Budget Handling:** When a user enters ₹0, the application cleanly displays the full estimated cost as over budget without division-by-zero errors.
 
 > **Disclaimer:** All expense estimates are illustrative baseline approximations intended for planning demonstrations. They are not live market prices or guaranteed commercial rates.
+
+---
+
+## 🎒 Packing Checklist
+
+The interactive packing checklist submenu allows travelers to track luggage preparation directly from the terminal:
+
+### Submenu Capabilities
+1. **View packing items:** Lists all items with their index numbers, visual checkmark status (`[X]` for packed, `[ ]` for unpacked), and real-time progress metrics (total items, packed count, remaining count, and completion percentage).
+2. **Add a packing item:** Prompts for an item name, validates against empty strings, and adds the new item with a default `packed: false` status.
+3. **Mark an item as packed or unpacked:** Allows selecting any item by its number to toggle its packed state. Handles empty lists and invalid indices gracefully.
+4. **Return to the main menu:** Returns cleanly to the primary application menu without losing checklist items stored in-memory.
 
 ---
 

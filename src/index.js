@@ -10,6 +10,9 @@ const rl = readline.createInterface({
 // In-memory storage for trips created during the application session
 const trips = [];
 
+// In-memory storage for packing checklist items
+const packingItems = [];
+
 // Function to display the main interactive menu options
 function displayMenu() {
   console.log('\n=============================');
@@ -387,6 +390,143 @@ function createTrip() {
   askDestination();
 }
 
+// Function to display the packing checklist submenu options
+function displayPackingMenu() {
+  console.log('\n=============================');
+  console.log('      PACKING CHECKLIST      ');
+  console.log('=============================');
+  console.log('1. View packing items');
+  console.log('2. Add a packing item');
+  console.log('3. Mark an item as packed or unpacked');
+  console.log('4. Return to the main menu');
+  console.log('=============================');
+}
+
+// Function to format and display all packing checklist items
+function viewPackingItems() {
+  console.log('\n========================================');
+  console.log('           PACKING CHECKLIST            ');
+  console.log('========================================');
+
+  if (packingItems.length === 0) {
+    console.log('Your packing checklist is currently empty.');
+    console.log('Use option 2 from the submenu to add an item.');
+    console.log('========================================');
+    return;
+  }
+
+  const totalCount = packingItems.length;
+  const packedCount = packingItems.filter((item) => item.packed).length;
+  const remainingCount = totalCount - packedCount;
+
+  console.log(`  Total Items : ${totalCount}`);
+  console.log(`  Packed      : ${packedCount}`);
+  console.log(`  Remaining   : ${remainingCount}`);
+  console.log('----------------------------------------');
+  packingItems.forEach((item, index) => {
+    const statusIcon = item.packed ? '[X]' : '[ ]';
+    const statusText = item.packed ? 'Packed' : 'Unpacked';
+    console.log(`  ${index + 1}. ${statusIcon} ${item.name} (${statusText})`);
+  });
+  console.log('----------------------------------------');
+  const percentage = Math.round((packedCount / totalCount) * 100);
+  console.log(`  Progress: ${packedCount} of ${totalCount} items packed (${percentage}%)`);
+  console.log('========================================');
+}
+
+// Function to prompt for and add a new packing item
+function addPackingItem() {
+  console.log('\n--- Add a Packing Item ---');
+
+  function promptItemName() {
+    rl.question('Enter item name: ', (input) => {
+      const name = input.trim();
+
+      if (!name) {
+        console.log('Error: Item name cannot be empty. Please enter a valid item name.');
+        return promptItemName();
+      }
+
+      packingItems.push({
+        name: name,
+        packed: false,
+      });
+
+      console.log(`Added: "${name}" has been added to your packing checklist.`);
+      managePackingChecklist();
+    });
+  }
+
+  promptItemName();
+}
+
+// Function to select and toggle an item's packed status
+function togglePackingItem() {
+  if (packingItems.length === 0) {
+    console.log('\nYour packing checklist is currently empty. Please add items before marking them.');
+    return managePackingChecklist();
+  }
+
+  console.log('\n--- Mark an Item as Packed or Unpacked ---');
+  viewPackingItems();
+
+  function promptItemNumber() {
+    rl.question(`Enter the item number to toggle (1-${packingItems.length}): `, (input) => {
+      const trimmed = input.trim();
+      const itemNumber = Number(trimmed);
+
+      if (!trimmed || !Number.isInteger(itemNumber) || itemNumber < 1 || itemNumber > packingItems.length) {
+        console.log(`Error: Please enter a valid item number between 1 and ${packingItems.length}.`);
+        return promptItemNumber();
+      }
+
+      const item = packingItems[itemNumber - 1];
+      item.packed = !item.packed;
+      const statusText = item.packed ? 'packed' : 'unpacked';
+      console.log(`\nUpdated: "${item.name}" is now marked as ${statusText}.`);
+
+      const packedCount = packingItems.filter((i) => i.packed).length;
+      console.log(`Checklist status: ${packedCount} of ${packingItems.length} items packed (${packingItems.length - packedCount} remaining).`);
+
+      managePackingChecklist();
+    });
+  }
+
+  promptItemNumber();
+}
+
+// Function to handle packing checklist menu interaction
+function managePackingChecklist() {
+  displayPackingMenu();
+  rl.question('Please enter your choice (1-4): ', (input) => {
+    const choice = input.trim();
+
+    switch (choice) {
+      case '1':
+        viewPackingItems();
+        managePackingChecklist();
+        break;
+
+      case '2':
+        addPackingItem();
+        break;
+
+      case '3':
+        togglePackingItem();
+        break;
+
+      case '4':
+        promptUser();
+        break;
+
+      default:
+        console.log('\nInvalid choice. Please enter a number between 1 and 4.');
+        managePackingChecklist();
+        break;
+    }
+  });
+}
+
 // Function to prompt the user for input and route their choice
 function promptUser() {
   displayMenu();
@@ -404,8 +544,7 @@ function promptUser() {
         break;
 
       case '3':
-        console.log('\nPacking Checklist feature will be implemented in a future commit.');
-        promptUser();
+        managePackingChecklist();
         break;
 
       case '4':
