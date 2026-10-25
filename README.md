@@ -154,17 +154,20 @@ node -v
 
 ---
 
-## 🖥️ Desktop Application (Commit 14)
+## 🖥️ Desktop Application (Commits 14 & 15)
 
-The application now features a desktop GUI built with **Electron**, **HTML5**, **Vanilla CSS**, and **JavaScript**:
+The application features a desktop GUI built with **Electron**, **HTML5**, **Vanilla CSS**, and **JavaScript**:
 
-- **Modern Dashboard:** Summary statistics for saved trips, total travel days, planned budgets, and estimated costs with recent trip quick actions.
-- **My Trips View:** Card-based trip browser with search filtering, budget comparisons, interest tags, and direct actions (view itinerary, budget analysis, export, delete).
+- **Modern Dashboard:** Real-time summary statistics for saved trips, total travel days, planned budgets, and estimated costs with recent trip quick actions.
+- **My Trips View:** Card-based trip browser with search filtering, budget comparisons, interest tags, and direct actions (view itinerary, budget analysis, edit, export, delete).
+- **In-place Trip Editing (Commit 15):** Edit modal allowing destination, duration, budget, and interest adjustments with live recalculation and automatic export file synchronization.
+- **Trip Deletion Safety:** Confirmation modal dialog preventing accidental deletions while preserving exported files.
 - **Interactive Trip Planner:** Dynamic trip creation form with multi-select interest chips and **live budget estimation preview** that recalculates as days change.
 - **Day-by-Day Itineraries:** Structured daily schedules broken down by morning, afternoon, and evening activities with export shortcuts.
-- **Budget Analysis:** Comparative breakdowns showing standard accommodation, transport, meal, and sightseeing costs vs planned targets.
-- **Packing Checklist:** Interactive luggage tracker with progress percentage, real-time item toggling, and completion filters.
-- **Security & Architecture:** Follows Electron best practices with `contextIsolation: true`, `nodeIntegration: false`, and secure IPC communication via `contextBridge` in `src/preload.js`.
+- **Comprehensive Budget Analysis:** Comparative breakdown showing baseline lodging, transport, meal, and sightseeing costs vs planned targets, along with budget surplus/deficit and utilization percentage.
+- **Persistent Packing Checklist (Commit 15):** Luggage tracker with progress percentage, real-time item toggling, completion filters, and persistent storage in `data/packing.json` shared across both GUI and CLI.
+- **Export & File Discovery:** Instant plain-text `.txt` export with one-click "Show in Folder" action to immediately reveal the exported itinerary in the system file manager.
+- **Security & Architecture:** Follows Electron security best practices with `contextIsolation: true`, `nodeIntegration: false`, and strictly validated IPC methods via `src/preload.js`.
 
 ---
 
@@ -172,7 +175,7 @@ The application now features a desktop GUI built with **Electron**, **HTML5**, *
 
 Core business logic, calculations, and storage are isolated in `src/tripService.js`:
 
-- **Data Persistence:** Reads and writes trip records to `data/trips.json` with error handling and corruption safeguards.
+- **Data Persistence:** Reads and writes trip records to `data/trips.json` and packing items to `data/packing.json` with corruption safeguards.
 - **Trip Operations (CRUD):** Reusable functions to create (`createTrip`), update (`updateTrip`), and delete (`deleteTrip`) trips.
 - **Itinerary & Budget Calculations:** Generates rule-based multi-day schedules and calculates expense breakdowns.
 - **File Exporting:** Creates formatted plain text `.txt` files in `exports/` with safe filename sanitization.
@@ -185,7 +188,8 @@ Core business logic, calculations, and storage are isolated in `src/tripService.
 ```text
 Travel Planner/
 ├── data/
-│   └── trips.json       # Saved trip data (auto-generated)
+│   ├── trips.json       # Saved trip data (auto-generated)
+│   └── packing.json     # Saved packing checklist items (auto-generated)
 ├── exports/             # Exported plain text itineraries (.txt)
 ├── src/
 │   ├── main.js          # Electron main process (window & IPC handlers)

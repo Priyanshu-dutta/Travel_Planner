@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     packingFilter: 'all',
     searchQuery: '',
     pendingDeleteIndex: null,
+    editingTripIndex: null,
   };
 
   // DOM Elements Cache
@@ -82,12 +83,29 @@ document.addEventListener('DOMContentLoaded', () => {
     packingFilterTabs: document.querySelectorAll('.packing-filter-tabs .tab-btn'),
     packingItemsList: document.getElementById('packing-items-list'),
 
-    // Modal & Toast
+    // Confirmation Modal
     confirmModal: document.getElementById('confirm-modal'),
     modalTitle: document.getElementById('modal-title'),
     modalMessage: document.getElementById('modal-message'),
     modalBtnCancel: document.getElementById('modal-btn-cancel'),
     modalBtnConfirm: document.getElementById('modal-btn-confirm'),
+
+    // Edit Trip Modal
+    editTripModal: document.getElementById('edit-trip-modal'),
+    editModalBtnClose: document.getElementById('edit-modal-btn-close'),
+    editModalBtnCancel: document.getElementById('edit-modal-btn-cancel'),
+    editForm: document.getElementById('edit-trip-form'),
+    editErrorBanner: document.getElementById('edit-error-banner'),
+    editTripDestination: document.getElementById('edit-trip-destination'),
+    editTripDays: document.getElementById('edit-trip-days'),
+    editTripBudget: document.getElementById('edit-trip-budget'),
+    editInterestPillsContainer: document.getElementById('edit-interest-pills-container'),
+    editTripCustomInterests: document.getElementById('edit-trip-custom-interests'),
+    editPreviewTotal: document.getElementById('edit-preview-total'),
+    editPreviewStatus: document.getElementById('edit-preview-status'),
+    btnSaveEditTrip: document.getElementById('btn-save-edit-trip'),
+
+    // Toast
     toastContainer: document.getElementById('toast-container'),
   };
 
@@ -125,8 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return `₹${num.toLocaleString('en-IN')}`;
   }
 
-  // Toast Notification System
-  function showToast(message, type = 'info') {
+  // Toast Notification System with optional action button
+  function showToast(message, type = 'info', action = null) {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
 
@@ -140,6 +158,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+
+    if (action && action.label && action.onClick) {
+      const actionBtn = document.createElement('button');
+      actionBtn.className = 'toast-action-btn';
+      actionBtn.textContent = action.label;
+      actionBtn.onclick = (e) => {
+        e.stopPropagation();
+        action.onClick();
+      };
+      toast.appendChild(actionBtn);
+    }
+
     elements.toastContainer.appendChild(toast);
 
     setTimeout(() => {
@@ -147,10 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(10px)';
       setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    }, 4500);
   }
 
-  // Modal Dialog System
+  // Delete Confirmation Modal System
   function openDeleteModal(tripIndex) {
     const trip = state.trips[tripIndex];
     if (!trip) return;
@@ -181,12 +211,154 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.success) {
         showToast(`Trip to "${response.trip.destination}" was deleted.`, 'success');
         await loadTripsData();
+        // Adjust selected dropdown indices if needed
+        if (state.selectedItineraryIndex >= state.trips.length) {
+          state.selectedItineraryIndex = Math.max(0, state.trips.length - 1);
+        }
+        if (state.selectedBudgetIndex >= state.trips.length) {
+          state.selectedBudgetIndex = Math.max(0, state.trips.length - 1);
+        }
         renderCurrentView();
       } else {
         showToast(`Failed to delete trip: ${response.error}`, 'error');
       }
     } catch (err) {
       showToast(`Error deleting trip: ${err.message}`, 'error');
+    }
+  });
+
+  // Edit Trip Modal System
+  function openEditModal(tripIndex) {
+    const trip = state.trips[tripIndex];
+    if (!trip) return;
+
+    state.editingTripIndex = tripIndex;
+    elements.editErrorBanner.style.display = 'none';
+    elements.editErrorBanner.innerHTML = '';
+
+    elements.editTripDestination.value = trip.destination || '';
+    elements.editTripDays.value = trip.days || 1;
+    elements.editTripBudget.value = trip.budget || 0;
+
+    // Synchronize interest pill selections
+    const currentInterests = (trip.interests || []).map((i) => String(i).toLowerCase().trim());
+    const pillButtons = elements.editInterestPillsContainer.querySelectorAll('.pill-chip');
+    const knownPills = [];
+
+    pillButtons.forEach((pill) => {
+      const val = pill.dataset.value.toLowerCase();
+      knownPills.push(val);
+      const isSelected = currentInterests.includes(val);
+      pill.classList.toggle('selected', isSelected);
+    });
+
+    // Populate custom interests with items not present in pill options
+    const customInterests = currentInterests.filter((i) => !knownPills.includes(i));
+    elements.editTripCustomInterests.value = customInterests.join(', ');
+
+    updateEditModalPreview();
+    elements.editTripModal.style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    state.editingTripIndex = null;
+    elements.editTripModal.style.display = 'none';
+    elements.editErrorBanner.style.display = 'none';
+  }
+
+  async function updateEditModalPreview() {
+    const days = Math.max(1, Number(elements.editTripDays.value) || 1);
+    const plannedBudget = Number(elements.editTripBudget.value) || 0;
+
+    try {
+      const res = await api.calculateBudget(days);
+      if (res.success && res.breakdown) {
+        const total = res.breakdown.total;
+        elements.editPreviewTotal.textContent = formatCurrency(total);
+
+        const diff = plannedBudget - total;
+        if (plannedBudget <= 0) {
+          elements.editPreviewStatus.textContent = '';
+        } else if (diff >= 0) {
+          elements.editPreviewStatus.innerHTML = `<span style="color: #34d399;">✓ Within budget (+${formatCurrency(diff)})</span>`;
+        } else {
+          elements.editPreviewStatus.innerHTML = `<span style="color: #fbbf24;">⚠️ Exceeds budget (-${formatCurrency(Math.abs(diff))})</span>`;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to calculate edit preview budget:', err);
+    }
+  }
+
+  elements.editInterestPillsContainer.addEventListener('click', (e) => {
+    const pill = e.target.closest('.pill-chip');
+    if (pill) {
+      pill.classList.toggle('selected');
+    }
+  });
+
+  elements.editTripDays.addEventListener('input', updateEditModalPreview);
+  elements.editTripBudget.addEventListener('input', updateEditModalPreview);
+
+  elements.editModalBtnClose.addEventListener('click', closeEditModal);
+  elements.editModalBtnCancel.addEventListener('click', closeEditModal);
+  elements.editTripModal.addEventListener('click', (e) => {
+    if (e.target === elements.editTripModal) closeEditModal();
+  });
+
+  elements.editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (state.editingTripIndex === null) return;
+
+    elements.editErrorBanner.style.display = 'none';
+    elements.editErrorBanner.innerHTML = '';
+
+    const selectedPills = Array.from(
+      elements.editInterestPillsContainer.querySelectorAll('.pill-chip.selected')
+    ).map((p) => p.dataset.value);
+
+    const customInterests = elements.editTripCustomInterests.value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const combinedInterests = Array.from(new Set([...selectedPills, ...customInterests]));
+
+    const updatedData = {
+      destination: elements.editTripDestination.value.trim(),
+      days: Number(elements.editTripDays.value),
+      budget: Number(elements.editTripBudget.value),
+      interests: combinedInterests,
+    };
+
+    elements.btnSaveEditTrip.disabled = true;
+    elements.btnSaveEditTrip.textContent = 'Saving Changes...';
+
+    try {
+      const response = await api.updateTrip(state.editingTripIndex, updatedData);
+
+      if (!response.success) {
+        elements.editErrorBanner.style.display = 'block';
+        elements.editErrorBanner.innerHTML = `
+          <strong>Please resolve the following issues:</strong>
+          <ul style="margin-left: 20px; margin-top: 6px;">
+            ${(response.errors || [response.error || 'Failed to update trip']).map((err) => `<li>${escapeHtml(err)}</li>`).join('')}
+          </ul>
+        `;
+        return;
+      }
+
+      closeEditModal();
+      const exportMsg = response.exportSyncNote ? ` (${response.exportSyncNote})` : '';
+      showToast(`Trip to "${response.trip.destination}" updated successfully!${exportMsg}`, 'success');
+      await loadTripsData();
+      renderCurrentView();
+    } catch (err) {
+      elements.editErrorBanner.style.display = 'block';
+      elements.editErrorBanner.textContent = `Error updating trip: ${err.message}`;
+    } finally {
+      elements.btnSaveEditTrip.disabled = false;
+      elements.btnSaveEditTrip.textContent = 'Save Changes';
     }
   });
 
@@ -423,15 +595,21 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn-secondary btn-sm action-view-budget" data-index="${realIndex}">
               Budget
             </button>
+            <button class="btn-icon-only action-edit-trip" data-index="${realIndex}" title="Edit Trip Details">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
             <button class="btn-icon-only action-export-trip" data-index="${realIndex}" title="Export Itinerary (.txt)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
             </button>
             <button class="btn-icon-only danger action-delete-trip" data-index="${realIndex}" title="Delete Trip">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
               </svg>
@@ -453,6 +631,12 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', (e) => {
         state.selectedBudgetIndex = Number(e.currentTarget.dataset.index);
         switchView('budget');
+      });
+    });
+
+    document.querySelectorAll('.action-edit-trip').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        openEditModal(Number(e.currentTarget.dataset.index));
       });
     });
 
@@ -480,7 +664,14 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const response = await api.exportTrip(index);
       if (response.success) {
-        showToast(`Itinerary exported to exports/${response.filename}!`, 'success');
+        showToast(
+          `Exported to exports/${response.filename}!`,
+          'success',
+          {
+            label: 'Show in Folder',
+            onClick: () => api.showItemInFolder(response.filePath),
+          }
+        );
       } else {
         showToast(`Export failed: ${response.error}`, 'error');
       }
@@ -709,10 +900,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const est = trip.estimatedBudget || { transport: 0, accommodation: 0, food: 0, activities: 0, total: 0 };
     const diff = trip.budget - est.total;
     const isWithin = diff >= 0;
+    const percentUsed = trip.budget > 0 ? ((est.total / trip.budget) * 100).toFixed(1) : '0.0';
 
     elements.budgetContent.innerHTML = `
       <div class="budget-summary-banner">
-        <div class="budget-comparison-row">
+        <div class="budget-comparison-row" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
           <div class="budget-metric">
             <span class="budget-metric-label">Planned Budget Target</span>
             <span class="budget-metric-val" style="color: #60a5fa;">${formatCurrency(trip.budget)}</span>
@@ -724,17 +916,24 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <div class="budget-metric">
-            <span class="budget-metric-label">${isWithin ? 'Estimated Surplus' : 'Estimated Deficit'}</span>
+            <span class="budget-metric-label">${isWithin ? 'Remaining Budget' : 'Budget Deficit'}</span>
             <span class="budget-metric-val" style="color: ${isWithin ? '#34d399' : '#fbbf24'};">
               ${isWithin ? '+' : '-'}${formatCurrency(Math.abs(diff))}
+            </span>
+          </div>
+
+          <div class="budget-metric">
+            <span class="budget-metric-label">Budget Utilized</span>
+            <span class="budget-metric-val" style="color: ${Number(percentUsed) <= 100 ? '#34d399' : '#fbbf24'};">
+              ${percentUsed}%
             </span>
           </div>
         </div>
 
         <div style="background: rgba(0,0,0,0.25); padding: 14px 18px; border-radius: var(--radius-sm); font-size: 0.9rem; line-height: 1.5;">
           ${isWithin
-            ? `<strong style="color: #34d399;">Great plan!</strong> Your planned budget of ${formatCurrency(trip.budget)} comfortably covers the estimated cost of ${formatCurrency(est.total)} with ${formatCurrency(diff)} to spare.`
-            : `<strong style="color: #fbbf24;">Budget alert:</strong> Your planned budget of ${formatCurrency(trip.budget)} is ${formatCurrency(Math.abs(diff))} below the projected standard cost of ${formatCurrency(est.total)}. Consider adjusting accommodation or activities.`
+            ? `<strong style="color: #34d399;">Budget Status: Within Budget (${percentUsed}% used).</strong> Your planned budget of ${formatCurrency(trip.budget)} comfortably covers the estimated standard cost of ${formatCurrency(est.total)} with ${formatCurrency(diff)} remaining.`
+            : `<strong style="color: #fbbf24;">Budget Status: Exceeds Budget (${percentUsed}% used).</strong> Your planned budget of ${formatCurrency(trip.budget)} is ${formatCurrency(Math.abs(diff))} below the projected standard cost of ${formatCurrency(est.total)}. Consider adjusting your duration or accommodation options.`
           }
         </div>
       </div>

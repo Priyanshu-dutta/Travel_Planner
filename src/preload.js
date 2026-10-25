@@ -22,6 +22,8 @@ const api = {
 
   // Utilities
   openExportsFolder: () => ipcRenderer.invoke('shell:openExports'),
+  showItemInFolder: (filePath) => ipcRenderer.invoke('shell:showItem', filePath),
+  openFile: (filePath) => ipcRenderer.invoke('shell:openFile', filePath),
   getAppInfo: () => ipcRenderer.invoke('app:getInfo'),
 };
 

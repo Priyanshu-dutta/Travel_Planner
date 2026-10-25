@@ -12,13 +12,15 @@ const path = require('path');
 // Storage paths configured relative to this file so they work regardless of process working directory
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const TRIPS_FILE_PATH = path.join(DATA_DIR, 'trips.json');
+const PACKING_FILE_PATH = path.join(DATA_DIR, 'packing.json');
 const EXPORTS_DIR = path.join(__dirname, '..', 'exports');
 
 // In-memory collection of trips for the current session
 let trips = [];
 
-// Flag to indicate if the storage file exists but contains invalid/corrupted JSON
+// Flags to indicate if storage files exist but contain invalid/corrupted JSON
 let isStorageCorrupted = false;
+let isPackingStorageCorrupted = false;
 
 // Helper function to ensure the data directory exists
 function ensureDataDirectoryExists() {
@@ -469,12 +471,52 @@ function exportTripItinerary(trip) {
 // In-memory packing checklist state
 const packingItems = [];
 
+// Function to safely load packing checklist from data/packing.json
+function loadPackingItems() {
+  try {
+    ensureDataDirectoryExists();
+    if (!fs.existsSync(PACKING_FILE_PATH)) {
+      return packingItems;
+    }
+    const rawData = fs.readFileSync(PACKING_FILE_PATH, 'utf8');
+    const parsed = JSON.parse(rawData);
+    if (!Array.isArray(parsed)) {
+      isPackingStorageCorrupted = true;
+      console.error(`\n[Storage Warning] "${PACKING_FILE_PATH}" does not contain a valid JSON array.`);
+      return packingItems;
+    }
+    packingItems.length = 0;
+    packingItems.push(...parsed);
+    return packingItems;
+  } catch (error) {
+    isPackingStorageCorrupted = true;
+    console.error(`\n[Storage Warning] Failed to read "${PACKING_FILE_PATH}": ${error.message}`);
+    return packingItems;
+  }
+}
+
+// Function to safely save packing items to data/packing.json
+function savePackingItems() {
+  if (isPackingStorageCorrupted) {
+    console.error(`\n[Storage Warning] Cannot save to "${PACKING_FILE_PATH}" because existing file is corrupted.`);
+    return false;
+  }
+  try {
+    ensureDataDirectoryExists();
+    fs.writeFileSync(PACKING_FILE_PATH, JSON.stringify(packingItems, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error(`\n[Storage Error] Failed to write packing checklist to "${PACKING_FILE_PATH}": ${error.message}\n`);
+    return false;
+  }
+}
+
 // Helper to get all packing items
 function getPackingItems() {
   return packingItems;
 }
 
-// Helper to add a packing item
+// Helper to add a packing item and persist to disk
 function addPackingItem(name) {
   if (!name || typeof name !== 'string' || !name.trim()) {
     throw new Error('Item name cannot be empty.');
@@ -485,24 +527,28 @@ function addPackingItem(name) {
     id: Date.now() + Math.random().toString(36).substring(2, 7),
   };
   packingItems.push(item);
+  savePackingItems();
   return item;
 }
 
-// Helper to toggle packing status
+// Helper to toggle packing status and persist to disk
 function togglePackingItem(index) {
   if (index < 0 || index >= packingItems.length) {
     throw new Error(`Invalid packing item index: ${index}`);
   }
   packingItems[index].packed = !packingItems[index].packed;
+  savePackingItems();
   return packingItems[index];
 }
 
-// Helper to delete a packing item
+// Helper to delete a packing item and persist to disk
 function deletePackingItem(index) {
   if (index < 0 || index >= packingItems.length) {
     throw new Error(`Invalid packing item index: ${index}`);
   }
-  return packingItems.splice(index, 1)[0];
+  const removed = packingItems.splice(index, 1)[0];
+  savePackingItems();
+  return removed;
 }
 
 // Trip input validation helper
@@ -543,11 +589,15 @@ function validateTripData(tripData) {
   };
 }
 
+// Automatically load existing packing items into memory on module load
+loadPackingItems();
+
 // CommonJS module exports
 module.exports = {
   // Paths & directory helpers
   DATA_DIR,
   TRIPS_FILE_PATH,
+  PACKING_FILE_PATH,
   EXPORTS_DIR,
   ensureDataDirectoryExists,
   ensureExportsDirectoryExists,
@@ -578,10 +628,13 @@ module.exports = {
   deleteTrip,
 
   // Packing Checklist
+  loadPackingItems,
+  savePackingItems,
   getPackingItems,
   addPackingItem,
   togglePackingItem,
   deletePackingItem,
+  isPackingStorageCorrupted: () => isPackingStorageCorrupted,
 
   // Export
   writeTripExportFile,

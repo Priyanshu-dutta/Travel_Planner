@@ -25,8 +25,8 @@ const rl = readline.createInterface({
 // Reference to in-memory trips array managed by tripService
 const trips = tripService.getTrips();
 
-// In-memory storage for packing checklist items
-const packingItems = [];
+// Reference to in-memory packing checklist items managed by tripService
+const packingItems = tripService.getPackingItems();
 
 // Function to display the main interactive menu options
 function displayMenu() {
@@ -271,10 +271,7 @@ function addPackingItem() {
         return promptItemName();
       }
 
-      packingItems.push({
-        name: name,
-        packed: false,
-      });
+      tripService.addPackingItem(name);
 
       console.log(`Added: "${name}" has been added to your packing checklist.`);
       managePackingChecklist();
@@ -304,8 +301,7 @@ function togglePackingItem() {
         return promptItemNumber();
       }
 
-      const item = packingItems[itemNumber - 1];
-      item.packed = !item.packed;
+      const item = tripService.togglePackingItem(itemNumber - 1);
       const statusText = item.packed ? 'packed' : 'unpacked';
       console.log(`\nUpdated: "${item.name}" is now marked as ${statusText}.`);
 

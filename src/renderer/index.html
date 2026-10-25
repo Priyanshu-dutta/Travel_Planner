@@ -445,6 +445,65 @@
     </div>
   </div>
 
+  <!-- Edit Trip Modal -->
+  <div class="modal-overlay" id="edit-trip-modal" style="display: none;">
+    <div class="modal-box modal-lg">
+      <div class="modal-header-row">
+        <div>
+          <h3 class="modal-title" style="text-align: left;">Edit Trip Details</h3>
+          <p class="modal-subtitle" style="text-align: left; font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+            Update destination, duration, budget, or interests.
+          </p>
+        </div>
+        <button type="button" class="btn-close-modal" id="edit-modal-btn-close">&times;</button>
+      </div>
+
+      <div id="edit-error-banner" class="alert-banner alert-error" style="display: none; margin-top: 14px; text-align: left;"></div>
+
+      <form id="edit-trip-form" novalidate style="margin-top: 16px;">
+        <div class="form-group" style="text-align: left;">
+          <label for="edit-trip-destination">Destination Name <span class="required">*</span></label>
+          <input type="text" id="edit-trip-destination" required>
+        </div>
+
+        <div class="form-row" style="text-align: left;">
+          <div class="form-group">
+            <label for="edit-trip-days">Duration (Days) <span class="required">*</span></label>
+            <input type="number" id="edit-trip-days" min="1" max="60" required>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-trip-budget">Planned Budget (₹) <span class="required">*</span></label>
+            <input type="number" id="edit-trip-budget" min="100" step="500" required>
+          </div>
+        </div>
+
+        <div class="form-group" style="text-align: left;">
+          <label>Interests & Themes <span class="required">*</span></label>
+          <div class="interest-pills" id="edit-interest-pills-container">
+            <button type="button" class="pill-chip" data-value="nature">🌲 Nature</button>
+            <button type="button" class="pill-chip" data-value="food">🍲 Food & Dining</button>
+            <button type="button" class="pill-chip" data-value="adventure">🧗 Adventure</button>
+            <button type="button" class="pill-chip" data-value="culture">🏛️ Culture & Heritage</button>
+            <button type="button" class="pill-chip" data-value="relaxation">🏖️ Relaxation</button>
+            <button type="button" class="pill-chip" data-value="shopping">🛍️ Shopping</button>
+          </div>
+          <input type="text" id="edit-trip-custom-interests" placeholder="Additional interests (comma-separated)">
+        </div>
+
+        <div class="edit-modal-preview">
+          <span>Recalculated Cost: <strong id="edit-preview-total" style="color: #60a5fa;">₹0</strong></span>
+          <span id="edit-preview-status" style="font-size: 0.8rem; margin-left: auto;"></span>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 22px;">
+          <button type="button" class="btn-secondary" id="edit-modal-btn-cancel">Cancel</button>
+          <button type="submit" class="btn-primary" id="btn-save-edit-trip">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 

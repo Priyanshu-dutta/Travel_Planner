@@ -88,10 +88,14 @@ ipcMain.handle('trips:create', async (_event, tripData) => {
 // Update an existing trip
 ipcMain.handle('trips:update', async (_event, { index, updatedData }) => {
   try {
+    const validation = tripService.validateTripData(updatedData);
+    if (!validation.valid) {
+      return { success: false, errors: validation.errors };
+    }
     const result = tripService.updateTrip(index, updatedData);
     return { success: true, ...result };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, errors: [error.message], error: error.message };
   }
 });
 
@@ -173,6 +177,32 @@ ipcMain.handle('shell:openExports', async () => {
     tripService.ensureExportsDirectoryExists();
     await shell.openPath(tripService.EXPORTS_DIR);
     return { success: true, path: tripService.EXPORTS_DIR };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Highlight or reveal specific file in system file manager
+ipcMain.handle('shell:showItem', async (_event, filePath) => {
+  try {
+    if (filePath) {
+      shell.showItemInFolder(filePath);
+      return { success: true };
+    }
+    return { success: false, error: 'File path not provided.' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Open file directly in default application
+ipcMain.handle('shell:openFile', async (_event, filePath) => {
+  try {
+    if (filePath) {
+      await shell.openPath(filePath);
+      return { success: true };
+    }
+    return { success: false, error: 'File path not provided.' };
   } catch (error) {
     return { success: false, error: error.message };
   }
