@@ -113,7 +113,8 @@ function displayMenu() {
   console.log('2. View Saved Trips');
   console.log('3. Packing Checklist');
   console.log('4. Export Itinerary');
-  console.log('5. Exit');
+  console.log('5. Manage Trips');
+  console.log('6. Exit');
   console.log('=============================');
 }
 
@@ -127,7 +128,7 @@ function formatCurrency(amount) {
 }
 
 // Function to format and display a clean, readable trip summary
-function displayTripSummary(trip) {
+function displayTripSummary(trip, successMessage = 'Trip created successfully!') {
   // Correctly handle singular ("1 day") vs plural ("X days")
   const dayText = trip.days === 1 ? 'day' : 'days';
 
@@ -142,7 +143,9 @@ function displayTripSummary(trip) {
   console.log(`  Budget      : ${formattedBudget}`);
   console.log(`  Interests   : ${trip.interests.join(', ')}`);
   console.log('========================================');
-  console.log('Trip created successfully!');
+  if (successMessage) {
+    console.log(successMessage);
+  }
 }
 
 // Rule-based activity suggestion templates categorized by interest and time slot
@@ -759,10 +762,273 @@ function managePackingChecklist() {
   });
 }
 
+// Function to display the Manage Trips submenu options
+function displayManageTripsMenu() {
+  console.log('\n=============================');
+  console.log('        MANAGE TRIPS         ');
+  console.log('=============================');
+  console.log('1. Edit a Trip');
+  console.log('2. Delete a Trip');
+  console.log('3. Return to Main Menu');
+  console.log('=============================');
+}
+
+// Function to handle Manage Trips submenu interaction
+function manageTrips() {
+  displayManageTripsMenu();
+  rl.question('Please enter your choice (1-3): ', (input) => {
+    const choice = input.trim();
+
+    switch (choice) {
+      case '1':
+        editTrip();
+        break;
+
+      case '2':
+        deleteTrip();
+        break;
+
+      case '3':
+        promptUser();
+        break;
+
+      default:
+        console.log('\nInvalid choice. Please enter a number between 1 and 3.');
+        manageTrips();
+        break;
+    }
+  });
+}
+
+// Function to select and edit an existing trip
+function editTrip() {
+  console.log('\n========================================');
+  console.log('               EDIT TRIP                ');
+  console.log('========================================');
+
+  // Handle case where no trips exist
+  if (trips.length === 0) {
+    console.log('No saved trips available to edit.');
+    console.log('Use option 1 from the main menu to create a trip first.');
+    console.log('========================================');
+    return manageTrips();
+  }
+
+  console.log('Available Trips:');
+  trips.forEach((trip, index) => {
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    console.log(`  ${index + 1}. ${trip.destination} (${trip.days} ${dayText})`);
+  });
+  console.log('========================================');
+
+  function promptTripSelection() {
+    rl.question(`Enter the trip number to edit (1-${trips.length}) or 0 to cancel: `, (input) => {
+      const trimmed = input.trim();
+
+      if (trimmed === '0') {
+        console.log('\nEdit cancelled. Returning to Manage Trips menu.');
+        return manageTrips();
+      }
+
+      const tripIndex = Number(trimmed);
+
+      if (!trimmed || !Number.isInteger(tripIndex) || tripIndex < 1 || tripIndex > trips.length) {
+        console.log(`Error: Please enter a valid trip number between 1 and ${trips.length}.`);
+        return promptTripSelection();
+      }
+
+      const selectedTrip = trips[tripIndex - 1];
+      promptEditDetails(selectedTrip);
+    });
+  }
+
+  promptTripSelection();
+}
+
+// Function to prompt for each trip property, allowing existing values to be preserved on empty input (Enter)
+function promptEditDetails(trip) {
+  console.log(`\n--- Editing Trip: ${trip.destination} ---`);
+  console.log('Press Enter to keep the current value shown in brackets.\n');
+
+  // Step 1: Destination
+  function askDestination() {
+    rl.question(`Enter destination [Current: ${trip.destination}]: `, (input) => {
+      // If user pressed Enter directly, keep existing value
+      if (input === '') {
+        return askDays(trip.destination);
+      }
+
+      const destination = input.trim();
+      if (!destination) {
+        console.log('Error: Destination cannot be empty when changed. Please enter a valid destination or press Enter to keep current.');
+        return askDestination();
+      }
+
+      askDays(destination);
+    });
+  }
+
+  // Step 2: Number of days
+  function askDays(newDestination) {
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    rl.question(`Enter number of days [Current: ${trip.days} ${dayText}]: `, (input) => {
+      if (input === '') {
+        return askBudget(newDestination, trip.days);
+      }
+
+      const trimmed = input.trim();
+      const days = Number(trimmed);
+
+      if (!trimmed || !Number.isInteger(days) || days <= 0) {
+        console.log('Error: Number of days must be a positive whole number (e.g. 1, 2, 5). Please try again.');
+        return askDays(newDestination);
+      }
+
+      askBudget(newDestination, days);
+    });
+  }
+
+  // Step 3: Planned budget
+  function askBudget(newDestination, newDays) {
+    rl.question(`Enter total budget in rupees [Current: ${trip.budget}]: `, (input) => {
+      if (input === '') {
+        return askInterests(newDestination, newDays, trip.budget);
+      }
+
+      const trimmed = input.trim();
+      const budget = Number(trimmed);
+
+      if (!trimmed || !Number.isFinite(budget) || budget < 0) {
+        console.log('Error: Budget must be a non-negative number (0 or greater). Please try again.');
+        return askBudget(newDestination, newDays);
+      }
+
+      askInterests(newDestination, newDays, budget);
+    });
+  }
+
+  // Step 4: Interests
+  function askInterests(newDestination, newDays, newBudget) {
+    const currentInterestsStr = trip.interests.join(', ');
+    rl.question(`Enter interests (comma-separated) [Current: ${currentInterestsStr}]: `, (input) => {
+      let finalInterests;
+
+      if (input === '') {
+        finalInterests = [...trip.interests];
+      } else {
+        const interests = input
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0);
+
+        if (interests.length === 0) {
+          console.log('Error: Please provide at least one valid interest or press Enter to keep current.');
+          return askInterests(newDestination, newDays, newBudget);
+        }
+
+        finalInterests = interests;
+      }
+
+      // Update the trip object fields
+      trip.destination = newDestination;
+      trip.days = newDays;
+      trip.budget = newBudget;
+      trip.interests = finalInterests;
+
+      // Regenerate day-by-day itinerary and recalculate budget estimates
+      trip.itinerary = generateItinerary(trip);
+      trip.estimatedBudget = calculateEstimatedBudget(trip.days);
+
+      // Persist the updated trip to data/trips.json
+      saveTrips();
+
+      // Display success confirmation, updated summary, itinerary, and budget breakdown
+      console.log('\n========================================');
+      console.log('       TRIP UPDATED SUCCESSFULLY!       ');
+      console.log('========================================');
+      displayTripSummary(trip, 'Trip details updated successfully!');
+      displayItinerary(trip);
+      displayBudgetBreakdown(trip);
+
+      manageTrips();
+    });
+  }
+
+  askDestination();
+}
+
+// Function to select and delete an existing trip with explicit confirmation
+function deleteTrip() {
+  console.log('\n========================================');
+  console.log('              DELETE TRIP               ');
+  console.log('========================================');
+
+  // Handle case where no trips exist
+  if (trips.length === 0) {
+    console.log('No saved trips available to delete.');
+    console.log('Use option 1 from the main menu to create a trip first.');
+    console.log('========================================');
+    return manageTrips();
+  }
+
+  console.log('Available Trips:');
+  trips.forEach((trip, index) => {
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    console.log(`  ${index + 1}. ${trip.destination} (${trip.days} ${dayText})`);
+  });
+  console.log('========================================');
+
+  function promptTripSelection() {
+    rl.question(`Enter the trip number to delete (1-${trips.length}) or 0 to cancel: `, (input) => {
+      const trimmed = input.trim();
+
+      if (trimmed === '0') {
+        console.log('\nDeletion cancelled. Returning to Manage Trips menu.');
+        return manageTrips();
+      }
+
+      const tripIndex = Number(trimmed);
+
+      if (!trimmed || !Number.isInteger(tripIndex) || tripIndex < 1 || tripIndex > trips.length) {
+        console.log(`Error: Please enter a valid trip number between 1 and ${trips.length}.`);
+        return promptTripSelection();
+      }
+
+      const selectedTrip = trips[tripIndex - 1];
+      promptDeleteConfirmation(selectedTrip, tripIndex - 1);
+    });
+  }
+
+  function promptDeleteConfirmation(trip, index) {
+    console.log(`\nSelected trip: ${trip.destination} (${trip.days} ${trip.days === 1 ? 'day' : 'days'})`);
+    rl.question('Are you sure you want to delete this trip? (yes/no): ', (input) => {
+      const answer = input.trim().toLowerCase();
+
+      if (answer === 'yes') {
+        const removedTrip = trips.splice(index, 1)[0];
+        saveTrips();
+
+        console.log('\n========================================');
+        console.log('       TRIP DELETED SUCCESSFULLY!       ');
+        console.log('========================================');
+        console.log(`Trip "${removedTrip.destination}" has been deleted.`);
+        console.log(`Remaining saved trips: ${trips.length}`);
+        console.log('========================================');
+        manageTrips();
+      } else {
+        console.log('\nDeletion cancelled. No changes were made to your trips.');
+        manageTrips();
+      }
+    });
+  }
+
+  promptTripSelection();
+}
+
 // Function to prompt the user for input and route their choice
 function promptUser() {
   displayMenu();
-  rl.question('Please enter your choice (1-5): ', (input) => {
+  rl.question('Please enter your choice (1-6): ', (input) => {
     const choice = input.trim();
 
     switch (choice) {
@@ -784,12 +1050,16 @@ function promptUser() {
         break;
 
       case '5':
+        manageTrips();
+        break;
+
+      case '6':
         console.log('\nThank you for using Travel Planner CLI. Goodbye!');
         rl.close();
         break;
 
       default:
-        console.log('\nInvalid choice. Please enter a number between 1 and 5.');
+        console.log('\nInvalid choice. Please enter a number between 1 and 6.');
         promptUser();
         break;
     }

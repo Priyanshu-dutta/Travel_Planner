@@ -20,6 +20,7 @@ The project will be built incrementally and will include the following capabilit
 - **Packing Checklist (Implemented in Commit 8):** Create and manage customized packing lists, track packed/unpacked status, and monitor preparation progress.
 - **Saving & Viewing Trips (Implemented in Commit 9):** Store trips locally in a JSON file, load previous trips on startup, and view all saved trip summaries.
 - **Exporting Itineraries (Implemented in Commit 10):** Export generated itineraries into readable plain text (`.txt`) files inside a dedicated `exports/` directory.
+- **Managing Trips – Edit & Delete (Implemented in Commit 11):** Edit existing trip details with automatic itinerary regeneration and budget recalculation, or safely delete trips with confirmation.
 
 ---
 
@@ -85,6 +86,30 @@ The application allows users to export any saved trip's itinerary into a readabl
 - **Export Directory:** Output files are automatically saved in the `exports/` directory, which is created automatically if it doesn't already exist.
 - **Sanitized Filenames:** Filenames are automatically sanitized based on the destination name (e.g. `goa_itinerary.txt`, `new_york_itinerary.txt`), removing any characters invalid for filesystems.
 - **File Content:** The generated text document includes the trip destination, duration, planned budget, estimated costs, interests, and the complete morning, afternoon, and evening daily schedule.
+
+---
+
+## 🛠️ Managing Trips (Edit & Delete)
+
+The application provides a dedicated submenu under Option 5 ("Manage Trips") to update or delete previously saved trips:
+
+### Submenu Capabilities
+1. **Edit a Trip:**
+   - Displays all saved trips with numbered selections or `0` to cancel.
+   - Allows users to selectively update Destination, Duration (days), Planned Budget, and Interests.
+   - Users can press **Enter** without typing to retain the current value of any field.
+   - Comprehensive validation ensures updated fields cannot be left blank, days must be a positive integer, and budget must be a non-negative number.
+   - Automatically **regenerates the day-by-day itinerary** and **recalculates the estimated budget breakdown** based on the updated inputs.
+   - Saves the updated trip to `data/trips.json` and immediately displays the refreshed trip summary and schedule.
+
+2. **Delete a Trip:**
+   - Displays all saved trips with numbered selections or `0` to cancel.
+   - Prompts for explicit confirmation before removing: `Are you sure you want to delete this trip? (yes/no)`.
+   - Deletes the trip from memory and saves the updated list to `data/trips.json` only if the user explicitly confirms with `yes`.
+   - Safely cancels the operation if the user answers `no` or cancels.
+   - **File Preservation:** Previously exported `.txt` itinerary files in `exports/` are preserved and never automatically deleted.
+
+3. **Return to Main Menu:** Returns cleanly to the main CLI menu.
 
 ---
 
