@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; script-src 'self';">
+  <title>Travel Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <div class="brand-text">
+            <span class="brand-title">Travel Planner</span>
+            <span class="brand-subtitle">Desktop Edition</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item" data-view="trips" id="nav-trips">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span>My Trips</span>
+          <span class="badge" id="sidebar-trips-count">0</span>
+        </button>
+
+        <button class="nav-item" data-view="create" id="nav-create">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <span>Create Trip</span>
+        </button>
+
+        <button class="nav-item" data-view="itinerary" id="nav-itinerary">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span>Itinerary</span>
+        </button>
+
+        <button class="nav-item" data-view="budget" id="nav-budget">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+          <span>Budget</span>
+        </button>
+
+        <button class="nav-item" data-view="packing" id="nav-packing">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 11 12 14 22 4"></polyline>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+          <span>Packing Checklist</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-text-action" id="btn-open-exports" title="Open exports folder in file manager">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Export Files</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header Bar -->
+      <header class="top-header">
+        <div class="header-titles">
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-subtitle">Overview of your travel journeys and planned itineraries</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-primary" id="header-btn-create">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Plan New Trip</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div class="content-body">
+        <!-- 1. DASHBOARD VIEW -->
+        <section class="view-section active" id="view-dashboard">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon-wrapper icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Saved Trips</span>
+                <span class="stat-value" id="stat-total-trips">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon-wrapper icon-teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Total Days Traveling</span>
+                <span class="stat-value" id="stat-total-days">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon-wrapper icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Planned Budget</span>
+                <span class="stat-value" id="stat-total-budget">₹0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon-wrapper icon-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Estimated Total Cost</span>
+                <span class="stat-value" id="stat-total-estimate">₹0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Highlights & Recent Trips -->
+          <div class="dashboard-sections">
+            <div class="dashboard-main-col">
+              <div class="section-card">
+                <div class="card-header-row">
+                  <div>
+                    <h2 class="card-heading">Recent Trips</h2>
+                    <p class="card-subheading">Your latest planned adventures</p>
+                  </div>
+                  <button class="btn-secondary btn-sm" id="btn-view-all-trips">View All</button>
+                </div>
+                <div id="dashboard-recent-trips" class="trip-grid-compact">
+                  <!-- Populated by JavaScript -->
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-side-col">
+              <div class="section-card highlight-card">
+                <h3 class="card-heading">Smart Travel Tips</h3>
+                <ul class="tips-list">
+                  <li>
+                    <span class="tip-bullet">✈️</span>
+                    <div>
+                      <strong>Rule of Thumb:</strong> Fixed transportation is estimated at ₹2,000 for standard regional travels.
+                    </div>
+                  </li>
+                  <li>
+                    <span class="tip-bullet">🏨</span>
+                    <div>
+                      <strong>Accommodation:</strong> Average baseline is calculated at ₹1,500/night for comfortable stays.
+                    </div>
+                  </li>
+                  <li>
+                    <span class="tip-bullet">📄</span>
+                    <div>
+                      <strong>Export Itinerary:</strong> Generate clean plain-text itineraries anytime to take with you offline.
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. MY TRIPS VIEW -->
+        <section class="view-section" id="view-trips">
+          <div class="filter-bar">
+            <div class="search-box">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="trip-search-input" placeholder="Search trips by destination or interest...">
+            </div>
+            <div class="filter-stats" id="trips-filter-stats">Showing all trips</div>
+          </div>
+
+          <div id="trips-container" class="trip-cards-grid">
+            <!-- Dynamic trip cards populated via renderer.js -->
+          </div>
+        </section>
+
+        <!-- 3. CREATE TRIP VIEW -->
+        <section class="view-section" id="view-create">
+          <div class="create-trip-layout">
+            <div class="form-card">
+              <div class="card-header">
+                <h2 class="card-heading">Plan a New Adventure</h2>
+                <p class="card-subheading">Fill in details to automatically generate itineraries and cost estimates</p>
+              </div>
+
+              <div id="create-error-banner" class="alert-banner alert-error" style="display: none;"></div>
+
+              <form id="create-trip-form" novalidate>
+                <div class="form-group">
+                  <label for="trip-destination">Destination Name <span class="required">*</span></label>
+                  <input type="text" id="trip-destination" placeholder="e.g., Manali, Goa, Tokyo, Paris" required>
+                  <span class="form-hint">Enter your target travel destination.</span>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="trip-days">Trip Duration (Days) <span class="required">*</span></label>
+                    <input type="number" id="trip-days" min="1" max="60" value="3" required>
+                    <span class="form-hint">Number of days to generate itinerary.</span>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="trip-budget">Planned Budget (₹ INR) <span class="required">*</span></label>
+                    <input type="number" id="trip-budget" min="100" step="500" value="15000" required>
+                    <span class="form-hint">Your maximum budget target.</span>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Interests & Themes <span class="required">*</span></label>
+                  <div class="interest-pills" id="interest-pills-container">
+                    <button type="button" class="pill-chip selected" data-value="nature">🌲 Nature</button>
+                    <button type="button" class="pill-chip selected" data-value="food">🍲 Food & Dining</button>
+                    <button type="button" class="pill-chip" data-value="adventure">🧗 Adventure</button>
+                    <button type="button" class="pill-chip" data-value="culture">🏛️ Culture & Heritage</button>
+                    <button type="button" class="pill-chip" data-value="relaxation">🏖️ Relaxation</button>
+                    <button type="button" class="pill-chip" data-value="shopping">🛍️ Shopping</button>
+                  </div>
+                  <input type="text" id="trip-custom-interests" placeholder="Additional interests (comma-separated, e.g. photography, hiking)">
+                  <span class="form-hint">Select tags or add your own interests to tailor activity suggestions.</span>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="btn-primary btn-lg" id="btn-submit-trip">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span>Create Trip & Generate Itinerary</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-lg" id="btn-cancel-create">Cancel</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Dynamic Live Cost Estimate Preview -->
+            <div class="preview-card">
+              <div class="preview-header">
+                <span class="preview-badge">Live Calculator</span>
+                <h3 class="preview-title">Estimated Budget Preview</h3>
+                <p class="preview-subtitle">Based on your selected duration of <strong id="preview-days-count">3</strong> days</p>
+              </div>
+
+              <div class="preview-breakdown">
+                <div class="preview-item">
+                  <div class="preview-item-label">
+                    <span>🚗 Transportation</span>
+                    <small>Fixed regional base rate</small>
+                  </div>
+                  <span class="preview-item-val" id="preview-val-transport">₹2,000</span>
+                </div>
+
+                <div class="preview-item">
+                  <div class="preview-item-label">
+                    <span>🏨 Accommodation</span>
+                    <small>₹1,500 / day</small>
+                  </div>
+                  <span class="preview-item-val" id="preview-val-accommodation">₹4,500</span>
+                </div>
+
+                <div class="preview-item">
+                  <div class="preview-item-label">
+                    <span>🍽️ Food & Meals</span>
+                    <small>₹800 / day</small>
+                  </div>
+                  <span class="preview-item-val" id="preview-val-food">₹2,400</span>
+                </div>
+
+                <div class="preview-item">
+                  <div class="preview-item-label">
+                    <span>🎟️ Activities & Entry</span>
+                    <small>₹700 / day</small>
+                  </div>
+                  <span class="preview-item-val" id="preview-val-activities">₹2,100</span>
+                </div>
+
+                <div class="preview-divider"></div>
+
+                <div class="preview-total-row">
+                  <span>Projected Cost</span>
+                  <span class="preview-total-val" id="preview-val-total">₹11,000</span>
+                </div>
+              </div>
+
+              <div class="preview-callout" id="preview-budget-status">
+                <span class="callout-icon">💡</span>
+                <span class="callout-text">Within your target budget by ₹4,000</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. ITINERARY VIEW -->
+        <section class="view-section" id="view-itinerary">
+          <div class="trip-selector-bar">
+            <label for="itinerary-trip-select">Select Trip:</label>
+            <select id="itinerary-trip-select" class="custom-select">
+              <!-- Populated by JavaScript -->
+            </select>
+            <button class="btn-secondary" id="btn-export-itinerary">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Export to File (.txt)</span>
+            </button>
+          </div>
+
+          <div id="itinerary-content" class="itinerary-display">
+            <!-- Populated dynamically -->
+          </div>
+        </section>
+
+        <!-- 5. BUDGET VIEW -->
+        <section class="view-section" id="view-budget">
+          <div class="trip-selector-bar">
+            <label for="budget-trip-select">Select Trip:</label>
+            <select id="budget-trip-select" class="custom-select">
+              <!-- Populated by JavaScript -->
+            </select>
+          </div>
+
+          <div id="budget-content" class="budget-display">
+            <!-- Populated dynamically -->
+          </div>
+        </section>
+
+        <!-- 6. PACKING CHECKLIST VIEW -->
+        <section class="view-section" id="view-packing">
+          <div class="packing-header-card">
+            <div class="packing-progress-info">
+              <div>
+                <h2 class="card-heading">Travel Packing Checklist</h2>
+                <p class="card-subheading">Track your essential luggage, documents, and gear</p>
+              </div>
+              <div class="packing-badge-pill" id="packing-status-badge">0 / 0 Packed (0%)</div>
+            </div>
+
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill" id="packing-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="packing-interaction-bar">
+            <div class="packing-input-wrapper">
+              <input type="text" id="new-packing-item-input" placeholder="Add an item (e.g. Passport, Charger, Warm Jacket, Sunscreen)...">
+              <button class="btn-primary" id="btn-add-packing-item">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Add Item</span>
+              </button>
+            </div>
+
+            <div class="packing-filter-tabs">
+              <button class="tab-btn active" data-filter="all">All</button>
+              <button class="tab-btn" data-filter="unpacked">To Pack</button>
+              <button class="tab-btn" data-filter="packed">Packed</button>
+            </div>
+          </div>
+
+          <div id="packing-items-list" class="packing-items-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="confirm-modal" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-icon-danger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+      </div>
+      <h3 class="modal-title" id="modal-title">Delete Trip</h3>
+      <p class="modal-message" id="modal-message">Are you sure you want to delete this trip? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="modal-btn-cancel">Cancel</button>
+        <button class="btn-danger" id="modal-btn-confirm">Delete Trip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

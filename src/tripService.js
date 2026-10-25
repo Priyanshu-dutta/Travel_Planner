@@ -466,6 +466,83 @@ function exportTripItinerary(trip) {
   return { filename, filePath, trip };
 }
 
+// In-memory packing checklist state
+const packingItems = [];
+
+// Helper to get all packing items
+function getPackingItems() {
+  return packingItems;
+}
+
+// Helper to add a packing item
+function addPackingItem(name) {
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    throw new Error('Item name cannot be empty.');
+  }
+  const item = {
+    name: name.trim(),
+    packed: false,
+    id: Date.now() + Math.random().toString(36).substring(2, 7),
+  };
+  packingItems.push(item);
+  return item;
+}
+
+// Helper to toggle packing status
+function togglePackingItem(index) {
+  if (index < 0 || index >= packingItems.length) {
+    throw new Error(`Invalid packing item index: ${index}`);
+  }
+  packingItems[index].packed = !packingItems[index].packed;
+  return packingItems[index];
+}
+
+// Helper to delete a packing item
+function deletePackingItem(index) {
+  if (index < 0 || index >= packingItems.length) {
+    throw new Error(`Invalid packing item index: ${index}`);
+  }
+  return packingItems.splice(index, 1)[0];
+}
+
+// Trip input validation helper
+function validateTripData(tripData) {
+  const errors = [];
+  if (!tripData || typeof tripData !== 'object') {
+    return { valid: false, errors: ['Trip data must be provided as an object.'] };
+  }
+
+  const destination = (tripData.destination || '').trim();
+  if (!destination) {
+    errors.push('Destination cannot be empty.');
+  } else if (!/^[a-zA-Z\s\-',.]+$/.test(destination)) {
+    errors.push('Destination must contain valid alphabetic characters.');
+  }
+
+  const days = Number(tripData.days);
+  if (!tripData.days || isNaN(days) || !Number.isInteger(days) || days <= 0) {
+    errors.push('Number of days must be a positive whole number greater than 0.');
+  }
+
+  const budget = Number(tripData.budget);
+  if (tripData.budget === undefined || tripData.budget === null || isNaN(budget) || budget <= 0) {
+    errors.push('Budget must be a positive number greater than 0.');
+  }
+
+  const interests = Array.isArray(tripData.interests)
+    ? tripData.interests
+    : (tripData.interests || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+  if (!interests || interests.length === 0) {
+    errors.push('Please specify at least one interest (e.g., nature, food, culture).');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
 // CommonJS module exports
 module.exports = {
   // Paths & directory helpers
@@ -495,9 +572,16 @@ module.exports = {
   generateItinerary,
 
   // Trip operations (CRUD)
+  validateTripData,
   createTrip,
   updateTrip,
   deleteTrip,
+
+  // Packing Checklist
+  getPackingItems,
+  addPackingItem,
+  togglePackingItem,
+  deletePackingItem,
 
   // Export
   writeTripExportFile,

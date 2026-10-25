@@ -1,1 +1,39 @@
-[]
+[
+  {
+    "destination": "shimla",
+    "days": 3,
+    "budget": 10100,
+    "interests": [
+      "nature",
+      "food"
+    ],
+    "itinerary": [
+      {
+        "day": 1,
+        "morning": "Visit a park, scenic viewpoint, or nature spot in shimla.",
+        "afternoon": "Visit a local food market and try regional street snacks in shimla.",
+        "evening": "Relax and watch the sunset from a scenic nature viewpoint in shimla."
+      },
+      {
+        "day": 2,
+        "morning": "Try regional morning bakery specialties and local tea or coffee in shimla.",
+        "afternoon": "Visit a popular nature reserve or scenic viewpoint in shimla.",
+        "evening": "Dine at a vibrant night food market or traditional culinary spot in shimla."
+      },
+      {
+        "day": 3,
+        "morning": "Visit a park, scenic viewpoint, or nature spot in shimla.",
+        "afternoon": "Visit a local food market and try regional street snacks in shimla.",
+        "evening": "Relax and watch the sunset from a scenic nature viewpoint in shimla."
+      }
+    ],
+    "estimatedBudget": {
+      "transport": 2000,
+      "accommodation": 4500,
+      "food": 3000,
+      "activities": 1500,
+      "total": 11000
+    },
+    "lastExportedFile": "shimla_itinerary.txt"
+  }
+]

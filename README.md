@@ -134,19 +134,19 @@ node -v
 
 ### Running the Application
 
-1. Clone or navigate to the project directory:
+1. **Desktop GUI Application (Electron):**
 
    ```bash
-   cd "Travel Planner"
+   npm run desktop
    ```
 
-2. Start the application using npm:
+2. **Terminal CLI Application:**
 
    ```bash
    npm start
    ```
 
-3. Alternatively, you can run the entry file directly with Node:
+3. Alternatively, you can run the CLI entry file directly with Node:
 
    ```bash
    node src/index.js
@@ -154,15 +154,29 @@ node -v
 
 ---
 
+## 🖥️ Desktop Application (Commit 14)
+
+The application now features a desktop GUI built with **Electron**, **HTML5**, **Vanilla CSS**, and **JavaScript**:
+
+- **Modern Dashboard:** Summary statistics for saved trips, total travel days, planned budgets, and estimated costs with recent trip quick actions.
+- **My Trips View:** Card-based trip browser with search filtering, budget comparisons, interest tags, and direct actions (view itinerary, budget analysis, export, delete).
+- **Interactive Trip Planner:** Dynamic trip creation form with multi-select interest chips and **live budget estimation preview** that recalculates as days change.
+- **Day-by-Day Itineraries:** Structured daily schedules broken down by morning, afternoon, and evening activities with export shortcuts.
+- **Budget Analysis:** Comparative breakdowns showing standard accommodation, transport, meal, and sightseeing costs vs planned targets.
+- **Packing Checklist:** Interactive luggage tracker with progress percentage, real-time item toggling, and completion filters.
+- **Security & Architecture:** Follows Electron best practices with `contextIsolation: true`, `nodeIntegration: false`, and secure IPC communication via `contextBridge` in `src/preload.js`.
+
+---
+
 ## 🧱 Modular Architecture (Trip Service)
 
-To support future desktop interfaces (such as Electron), core business logic, calculations, and storage have been extracted from the CLI interface into `src/tripService.js`:
+Core business logic, calculations, and storage are isolated in `src/tripService.js`:
 
 - **Data Persistence:** Reads and writes trip records to `data/trips.json` with error handling and corruption safeguards.
-- **Trip Operations (CRUD):** Functions to create (`createTrip`), update (`updateTrip`), and delete (`deleteTrip`) trips cleanly.
+- **Trip Operations (CRUD):** Reusable functions to create (`createTrip`), update (`updateTrip`), and delete (`deleteTrip`) trips.
 - **Itinerary & Budget Calculations:** Generates rule-based multi-day schedules and calculates expense breakdowns.
 - **File Exporting:** Creates formatted plain text `.txt` files in `exports/` with safe filename sanitization.
-- **CommonJS Module:** Exports reusable functions that can be directly imported by both the current terminal CLI (`src/index.js`) and future desktop windows.
+- **CommonJS Module:** Shared seamlessly between the terminal CLI (`src/index.js`) and the Electron main process (`src/main.js`).
 
 ---
 
@@ -171,12 +185,18 @@ To support future desktop interfaces (such as Electron), core business logic, ca
 ```text
 Travel Planner/
 ├── data/
-│   └── trips.json     # Saved trip data (auto-generated)
-├── exports/           # Exported plain text itineraries (.txt)
+│   └── trips.json       # Saved trip data (auto-generated)
+├── exports/             # Exported plain text itineraries (.txt)
 ├── src/
-│   ├── index.js       # Main CLI application entry point
-│   └── tripService.js # Core business logic, calculations & storage service
-├── .gitignore         # Files and directories ignored by Git
-├── package.json       # Project configuration and npm scripts
-└── README.md          # Project documentation and roadmap
+│   ├── main.js          # Electron main process (window & IPC handlers)
+│   ├── preload.js       # Secure IPC bridge (contextBridge)
+│   ├── tripService.js   # Core business logic, calculations & storage service
+│   ├── index.js         # Terminal CLI entry point
+│   └── renderer/        # Desktop GUI interface
+│       ├── index.html   # Desktop application markup
+│       ├── styles.css   # Modern dark-mode styling and animations
+│       └── renderer.js  # Desktop UI logic and IPC client
+├── .gitignore           # Files and directories ignored by Git
+├── package.json         # Project configuration and npm scripts
+└── README.md            # Project documentation and roadmap
 ```

@@ -4,7 +4,8 @@
   "description": "A modular command-line travel planning application built with JavaScript and Node.js.",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "desktop": "electron src/main.js"
   },
   "keywords": [
     "travel-planner",
@@ -13,5 +14,8 @@
     "javascript"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^45.0.0"
+  }
 }
