@@ -21,6 +21,7 @@ The project will be built incrementally and will include the following capabilit
 - **Saving & Viewing Trips (Implemented in Commit 9):** Store trips locally in a JSON file, load previous trips on startup, and view all saved trip summaries.
 - **Exporting Itineraries (Implemented in Commit 10):** Export generated itineraries into readable plain text (`.txt`) files inside a dedicated `exports/` directory.
 - **Managing Trips – Edit & Delete (Implemented in Commit 11):** Edit existing trip details with automatic itinerary regeneration and budget recalculation, or safely delete trips with confirmation.
+- **Modular Architecture (Implemented in Commit 13):** Separated business logic, calculations, storage, and file export operations into a dedicated reusable module (`src/tripService.js`) in preparation for future desktop GUI integration.
 
 ---
 
@@ -153,6 +154,18 @@ node -v
 
 ---
 
+## 🧱 Modular Architecture (Trip Service)
+
+To support future desktop interfaces (such as Electron), core business logic, calculations, and storage have been extracted from the CLI interface into `src/tripService.js`:
+
+- **Data Persistence:** Reads and writes trip records to `data/trips.json` with error handling and corruption safeguards.
+- **Trip Operations (CRUD):** Functions to create (`createTrip`), update (`updateTrip`), and delete (`deleteTrip`) trips cleanly.
+- **Itinerary & Budget Calculations:** Generates rule-based multi-day schedules and calculates expense breakdowns.
+- **File Exporting:** Creates formatted plain text `.txt` files in `exports/` with safe filename sanitization.
+- **CommonJS Module:** Exports reusable functions that can be directly imported by both the current terminal CLI (`src/index.js`) and future desktop windows.
+
+---
+
 ## 📂 Project Structure
 
 ```text
@@ -161,7 +174,8 @@ Travel Planner/
 │   └── trips.json     # Saved trip data (auto-generated)
 ├── exports/           # Exported plain text itineraries (.txt)
 ├── src/
-│   └── index.js       # Main application entry point
+│   ├── index.js       # Main CLI application entry point
+│   └── tripService.js # Core business logic, calculations & storage service
 ├── .gitignore         # Files and directories ignored by Git
 ├── package.json       # Project configuration and npm scripts
 └── README.md          # Project documentation and roadmap

@@ -1,7 +1,20 @@
-// Import built-in modules to handle terminal I/O, file system, and paths
+// ============================================================
+// index.js - Command-Line Interface for Travel Planner
+// ============================================================
+// Responsible for terminal I/O, user prompts, input validation,
+// and formatted console output. Business logic, calculations,
+// and persistent storage are handled by src/tripService.js.
+
 const readline = require('readline');
-const fs = require('fs');
-const path = require('path');
+const tripService = require('./tripService');
+
+// Destructure reusable helper functions and rates from tripService
+const {
+  formatCurrency,
+  calculateEstimatedBudget,
+  BUDGET_ESTIMATION_RATES,
+  generateItinerary,
+} = tripService;
 
 // Create a readline interface connected to standard input (keyboard) and standard output (terminal)
 const rl = readline.createInterface({
@@ -9,100 +22,11 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-// Storage paths for persistent JSON trip data and itinerary text exports
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const TRIPS_FILE_PATH = path.join(DATA_DIR, 'trips.json');
-const EXPORTS_DIR = path.join(__dirname, '..', 'exports');
-
-// In-memory storage for trips created during or loaded into the application session
-const trips = [];
+// Reference to in-memory trips array managed by tripService
+const trips = tripService.getTrips();
 
 // In-memory storage for packing checklist items
 const packingItems = [];
-
-// Flag to track if the storage file exists but contains invalid/corrupted data
-let isStorageCorrupted = false;
-
-// Helper function to ensure the data directory exists
-function ensureDataDirectoryExists() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-// Helper function to ensure the exports directory exists
-function ensureExportsDirectoryExists() {
-  if (!fs.existsSync(EXPORTS_DIR)) {
-    fs.mkdirSync(EXPORTS_DIR, { recursive: true });
-  }
-}
-
-// Helper function to generate a safe, sanitized filename from a destination string
-function sanitizeFilename(destination) {
-  const safeName = destination
-    .trim()
-    .toLowerCase()
-    .replace(/[/\\?%*:|"<>]/g, '_')
-    .replace(/[^a-z0-9_-]/gi, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '');
-
-  return `${safeName || 'trip'}_itinerary.txt`;
-}
-
-// Function to safely load saved trips from local JSON file
-function loadTrips() {
-  try {
-    ensureDataDirectoryExists();
-
-    // If file does not exist, initialize it with an empty array
-    if (!fs.existsSync(TRIPS_FILE_PATH)) {
-      fs.writeFileSync(TRIPS_FILE_PATH, JSON.stringify([], null, 2), 'utf8');
-      return [];
-    }
-
-    const rawData = fs.readFileSync(TRIPS_FILE_PATH, 'utf8');
-
-    // Handle empty file gracefully
-    if (!rawData.trim()) {
-      return [];
-    }
-
-    const parsed = JSON.parse(rawData);
-
-    if (!Array.isArray(parsed)) {
-      isStorageCorrupted = true;
-      console.error(`\n[Storage Warning] "${TRIPS_FILE_PATH}" does not contain a valid JSON array.`);
-      console.error('To prevent data loss, automatic saving is disabled until the file is fixed.\n');
-      return [];
-    }
-
-    return parsed;
-  } catch (error) {
-    isStorageCorrupted = true;
-    console.error(`\n[Storage Error] Failed to read or parse "${TRIPS_FILE_PATH}": ${error.message}`);
-    console.error('To prevent overwriting existing data, automatic saving is disabled until the file is fixed.\n');
-    return [];
-  }
-}
-
-// Function to safely save trips to local JSON file
-function saveTrips() {
-  if (isStorageCorrupted) {
-    console.error(`\n[Storage Warning] Cannot save to "${TRIPS_FILE_PATH}" because the existing file contains invalid JSON.`);
-    console.error('The trip was added to this session in memory, but the file was NOT overwritten to prevent data loss.\n');
-    return false;
-  }
-
-  try {
-    ensureDataDirectoryExists();
-    fs.writeFileSync(TRIPS_FILE_PATH, JSON.stringify(trips, null, 2), 'utf8');
-    return true;
-  } catch (error) {
-    console.error(`\n[Storage Error] Failed to write trips to "${TRIPS_FILE_PATH}": ${error.message}\n`);
-    return false;
-  }
-}
 
 // Function to display the main interactive menu options
 function displayMenu() {
@@ -118,21 +42,9 @@ function displayMenu() {
   console.log('=============================');
 }
 
-// Helper function to format numbers into Indian Rupee currency format (INR)
-function formatCurrency(amount) {
-  return amount.toLocaleString('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  });
-}
-
-// Function to format and display a clean, readable trip summary
+// Function to format and display a clean, readable trip summary in the terminal
 function displayTripSummary(trip, successMessage = 'Trip created successfully!') {
-  // Correctly handle singular ("1 day") vs plural ("X days")
   const dayText = trip.days === 1 ? 'day' : 'days';
-
-  // Format budget in Indian Rupees using formatCurrency helper
   const formattedBudget = formatCurrency(trip.budget);
 
   console.log('\n========================================');
@@ -146,153 +58,6 @@ function displayTripSummary(trip, successMessage = 'Trip created successfully!')
   if (successMessage) {
     console.log(successMessage);
   }
-}
-
-// Rule-based activity suggestion templates categorized by interest and time slot
-const ACTIVITY_SUGGESTIONS = {
-  nature: {
-    morning: [
-      (dest) => `Visit a park, scenic viewpoint, or nature spot in ${dest}.`,
-      (dest) => `Take a peaceful morning walk through a botanical garden or park in ${dest}.`,
-    ],
-    afternoon: [
-      (dest) => `Explore a nature trail, scenic lake, or green space in ${dest}.`,
-      (dest) => `Visit a popular nature reserve or scenic viewpoint in ${dest}.`,
-    ],
-    evening: [
-      (dest) => `Relax and watch the sunset from a scenic nature viewpoint in ${dest}.`,
-      (dest) => `Enjoy a tranquil twilight stroll along a scenic waterfront or park in ${dest}.`,
-    ],
-  },
-  food: {
-    morning: [
-      (dest) => `Sample popular local breakfast dishes or visit a morning cafe in ${dest}.`,
-      (dest) => `Try regional morning bakery specialties and local tea or coffee in ${dest}.`,
-    ],
-    afternoon: [
-      (dest) => `Visit a local food market and try regional street snacks in ${dest}.`,
-      (dest) => `Explore local eateries to taste authentic regional lunch dishes in ${dest}.`,
-    ],
-    evening: [
-      (dest) => `Try local cuisine and signature specialties at a traditional restaurant in ${dest}.`,
-      (dest) => `Dine at a vibrant night food market or traditional culinary spot in ${dest}.`,
-    ],
-  },
-  adventure: {
-    morning: [
-      (dest) => `Explore an outdoor activity such as hiking or cycling around ${dest}.`,
-      (dest) => `Set out on an energizing morning trek or outdoor trail in ${dest}.`,
-    ],
-    afternoon: [
-      (dest) => `Explore an outdoor activity or exciting adventure sports spot in ${dest}.`,
-      (dest) => `Participate in a guided outdoor adventure or recreational trail in ${dest}.`,
-    ],
-    evening: [
-      (dest) => `Unwind after an active day at an open-air cafe or scenic spot in ${dest}.`,
-      (dest) => `Relax and share adventure highlights at a scenic gathering spot in ${dest}.`,
-    ],
-  },
-  shopping: {
-    morning: [
-      (dest) => `Browse local craft stalls and artisan shops for unique souvenirs in ${dest}.`,
-      (dest) => `Visit artisan workshops and morning craft boutiques in ${dest}.`,
-    ],
-    afternoon: [
-      (dest) => `Explore local shops or markets in ${dest}.`,
-      (dest) => `Wander through traditional bazaars and local shopping streets in ${dest}.`,
-    ],
-    evening: [
-      (dest) => `Stroll through an evening shopping street or night market in ${dest}.`,
-      (dest) => `Browse evening souvenir markets and local specialty stores in ${dest}.`,
-    ],
-  },
-  culture: {
-    morning: [
-      (dest) => `Visit a cultural or historical attraction in ${dest}.`,
-      (dest) => `Tour an iconic historical monument or heritage landmark in ${dest}.`,
-    ],
-    afternoon: [
-      (dest) => `Explore a local museum or historical monument in ${dest}.`,
-      (dest) => `Visit a cultural heritage center or regional art gallery in ${dest}.`,
-    ],
-    evening: [
-      (dest) => `Attend a cultural performance or take an evening heritage walk in ${dest}.`,
-      (dest) => `Experience traditional music, dance, or evening historic street walks in ${dest}.`,
-    ],
-  },
-  generic: {
-    morning: [
-      (dest) => `Take a morning walk and explore key sights around ${dest}.`,
-      (dest) => `Start the day with a relaxed stroll around the town center in ${dest}.`,
-    ],
-    afternoon: [
-      (dest) => `Discover popular local landmarks or scenic spots in ${dest}.`,
-      (dest) => `Explore iconic neighborhood spots and public squares in ${dest}.`,
-    ],
-    evening: [
-      (dest) => `Enjoy a relaxed evening stroll and dine at a welcoming local eatery in ${dest}.`,
-      (dest) => `Unwind with a quiet evening walk and try dinner at a nearby cafe in ${dest}.`,
-    ],
-  },
-};
-
-// Helper function to map a user-entered interest string to a recognized interest category
-function getInterestCategory(interest) {
-  const normalized = interest.toLowerCase().trim();
-
-  if (normalized.includes('nature') || normalized.includes('park') || normalized.includes('scenic')) {
-    return 'nature';
-  }
-  if (normalized.includes('food') || normalized.includes('cuisine') || normalized.includes('culinary') || normalized.includes('dining')) {
-    return 'food';
-  }
-  if (normalized.includes('adventure') || normalized.includes('hiking') || normalized.includes('trekking') || normalized.includes('sport')) {
-    return 'adventure';
-  }
-  if (normalized.includes('shopping') || normalized.includes('shop') || normalized.includes('market') || normalized.includes('bazaar')) {
-    return 'shopping';
-  }
-  if (normalized.includes('culture') || normalized.includes('history') || normalized.includes('historical') || normalized.includes('heritage') || normalized.includes('museum')) {
-    return 'culture';
-  }
-
-  // Sensible generic fallback for unrecognized interests
-  return 'generic';
-}
-
-// Helper function to get an activity suggestion based on interest, time slot, destination, and day number
-function getSuggestion(interest, timeSlot, destination, dayNumber) {
-  const category = getInterestCategory(interest);
-  const slotOptions = ACTIVITY_SUGGESTIONS[category][timeSlot];
-  // Cycle through variations using day number to keep multi-day itineraries diverse
-  const variationIndex = (dayNumber - 1) % slotOptions.length;
-  return slotOptions[variationIndex](destination);
-}
-
-// Function to generate a day-by-day itinerary data structure based on trip details and interests
-function generateItinerary(trip) {
-  const itinerary = [];
-  const interests = trip.interests && trip.interests.length > 0 ? trip.interests : ['general'];
-
-  // Loop through each day from 1 to the total number of days
-  for (let day = 1; day <= trip.days; day++) {
-    // Rotate through user interests across morning, afternoon, and evening slots
-    const morningInterest = interests[((day - 1) * 3 + 0) % interests.length];
-    const afternoonInterest = interests[((day - 1) * 3 + 1) % interests.length];
-    const eveningInterest = interests[((day - 1) * 3 + 2) % interests.length];
-
-    // Build the plan for the day with all three time slots
-    const dayPlan = {
-      day: day,
-      morning: getSuggestion(morningInterest, 'morning', trip.destination, day),
-      afternoon: getSuggestion(afternoonInterest, 'afternoon', trip.destination, day),
-      evening: getSuggestion(eveningInterest, 'evening', trip.destination, day),
-    };
-
-    itinerary.push(dayPlan);
-  }
-
-  return itinerary;
 }
 
 // Function to format and display the day-by-day itinerary in the terminal
@@ -316,31 +81,6 @@ function displayItinerary(trip) {
   });
 
   console.log('\n========================================');
-}
-
-// Baseline estimation rate constants (in INR) used for illustrative budget calculations
-const BUDGET_ESTIMATION_RATES = {
-  TRANSPORT_FIXED: 2000,        // Fixed estimated transport / travel allowance per trip
-  ACCOMMODATION_PER_DAY: 1500,  // Estimated stay / lodging cost per day
-  FOOD_PER_DAY: 1000,           // Estimated meal & dining cost per day
-  ACTIVITIES_PER_DAY: 500,      // Estimated sightseeing & activity cost per day
-};
-
-// Function to calculate estimated trip expenses based on the number of days
-function calculateEstimatedBudget(days) {
-  const transport = BUDGET_ESTIMATION_RATES.TRANSPORT_FIXED;
-  const accommodation = BUDGET_ESTIMATION_RATES.ACCOMMODATION_PER_DAY * days;
-  const food = BUDGET_ESTIMATION_RATES.FOOD_PER_DAY * days;
-  const activities = BUDGET_ESTIMATION_RATES.ACTIVITIES_PER_DAY * days;
-  const total = transport + accommodation + food + activities;
-
-  return {
-    transport,
-    accommodation,
-    food,
-    activities,
-    total,
-  };
 }
 
 // Function to format and display the estimated budget breakdown and comparison
@@ -368,7 +108,6 @@ function displayBudgetBreakdown(trip) {
   console.log(`  User's Planned Budget     : ${formatCurrency(plannedBudget)}`);
   console.log('----------------------------------------');
 
-  // Budget status and remaining / over-budget calculation
   if (isWithinBudget) {
     console.log(`  Budget Status             : Within Budget`);
     console.log(`  Remaining Budget          : ${formatCurrency(difference)}`);
@@ -378,7 +117,6 @@ function displayBudgetBreakdown(trip) {
     console.log(`  Amount Over Budget        : ${formatCurrency(overBudget)}`);
   }
 
-  // Percentage of budget used, where meaningful
   if (plannedBudget > 0) {
     const percentageUsed = ((estimatedTotal / plannedBudget) * 100).toFixed(1);
     console.log(`  Percentage of Budget Used : ${percentageUsed}%`);
@@ -450,25 +188,13 @@ function createTrip() {
         return askInterests(destination, days, budget);
       }
 
-      // Create the trip object with validated data
-      const newTrip = {
+      // Delegate trip creation, itinerary generation, budget calculation, and saving to tripService
+      const newTrip = tripService.createTrip({
         destination: destination,
         days: days,
         budget: budget,
         interests: interests,
-      };
-
-      // Generate and attach day-by-day itinerary to the trip object
-      newTrip.itinerary = generateItinerary(newTrip);
-
-      // Calculate and attach estimated budget breakdown
-      newTrip.estimatedBudget = calculateEstimatedBudget(newTrip.days);
-
-      // Store the trip in the in-memory array
-      trips.push(newTrip);
-
-      // Save trips to persistent JSON file storage
-      saveTrips();
+      });
 
       // Display the formatted trip summary
       displayTripSummary(newTrip);
@@ -558,183 +284,6 @@ function addPackingItem() {
   promptItemName();
 }
 
-// Function to format and display all saved trips and their summaries
-function viewSavedTrips() {
-  console.log('\n========================================');
-  console.log('              SAVED TRIPS               ');
-  console.log('========================================');
-
-  if (trips.length === 0) {
-    console.log('No saved trips found.');
-    console.log('Use option 1 from the main menu to create a trip.');
-    console.log('========================================');
-    return;
-  }
-
-  const tripText = trips.length === 1 ? 'trip' : 'trips';
-  console.log(`  Total Saved : ${trips.length} ${tripText}`);
-  console.log('========================================');
-
-  trips.forEach((trip, index) => {
-    const dayText = trip.days === 1 ? 'day' : 'days';
-    const formattedBudget = formatCurrency(trip.budget);
-    const estimatedTotal = trip.estimatedBudget ? formatCurrency(trip.estimatedBudget.total) : 'N/A';
-
-    console.log(`Trip #${index + 1}:`);
-    console.log(`  Destination          : ${trip.destination}`);
-    console.log(`  Duration             : ${trip.days} ${dayText}`);
-    console.log(`  Planned Budget       : ${formattedBudget}`);
-    console.log(`  Total Estimated Cost : ${estimatedTotal}`);
-    console.log(`  Interests            : ${trip.interests.join(', ')}`);
-    if (index < trips.length - 1) {
-      console.log('----------------------------------------');
-    }
-  });
-
-  console.log('========================================');
-}
-
-// Function to handle exporting a saved trip's itinerary to a text file
-function exportItinerary() {
-  console.log('\n========================================');
-  console.log('            EXPORT ITINERARY            ');
-  console.log('========================================');
-
-  // Check if there are saved trips to export
-  if (trips.length === 0) {
-    console.log('No saved trips available to export.');
-    console.log('Use option 1 from the main menu to create a trip first.');
-    console.log('========================================');
-    return promptUser();
-  }
-
-  console.log('Available Trips:');
-  trips.forEach((trip, index) => {
-    const dayText = trip.days === 1 ? 'day' : 'days';
-    console.log(`  ${index + 1}. ${trip.destination} (${trip.days} ${dayText})`);
-  });
-  console.log('========================================');
-
-  function promptTripSelection() {
-    rl.question(`Enter the trip number to export (1-${trips.length}) or 0 to cancel: `, (input) => {
-      const trimmed = input.trim();
-
-      if (trimmed === '0') {
-        console.log('\nExport cancelled. Returning to main menu.');
-        return promptUser();
-      }
-
-      const tripIndex = Number(trimmed);
-
-      if (!trimmed || !Number.isInteger(tripIndex) || tripIndex < 1 || tripIndex > trips.length) {
-        console.log(`Error: Please enter a valid trip number between 1 and ${trips.length}.`);
-        return promptTripSelection();
-      }
-
-      const selectedTrip = trips[tripIndex - 1];
-      performTripExport(selectedTrip);
-    });
-  }
-
-  promptTripSelection();
-}
-
-// Helper function to build and write trip export file content
-function writeTripExportFile(trip, filename) {
-  ensureExportsDirectoryExists();
-  const filePath = path.join(EXPORTS_DIR, filename);
-
-  const dayText = trip.days === 1 ? 'day' : 'days';
-  const formattedBudget = formatCurrency(trip.budget);
-
-  // Always use the latest generated itinerary and budget calculations
-  const itinerary = (trip.itinerary && trip.itinerary.length === trip.days)
-    ? trip.itinerary
-    : generateItinerary(trip);
-  const estimatedBudget = trip.estimatedBudget || calculateEstimatedBudget(trip.days);
-
-  // Build the text content for the exported itinerary file
-  let content = '';
-  content += '============================================================\n';
-  content += '                     TRIP ITINERARY                         \n';
-  content += '============================================================\n';
-  content += `Destination    : ${trip.destination}\n`;
-  content += `Duration       : ${trip.days} ${dayText}\n`;
-  content += `Planned Budget : ${formattedBudget}\n`;
-  if (estimatedBudget) {
-    content += `Estimated Cost : ${formatCurrency(estimatedBudget.total)}\n`;
-  }
-  content += `Interests      : ${trip.interests.join(', ')}\n`;
-  content += '============================================================\n\n';
-  content += 'DAY-BY-DAY ITINERARY:\n\n';
-
-  itinerary.forEach((item) => {
-    content += `Day ${item.day}:\n`;
-    content += `  - Morning   : ${item.morning}\n`;
-    content += `  - Afternoon : ${item.afternoon}\n`;
-    content += `  - Evening   : ${item.evening}\n\n`;
-  });
-
-  content += '============================================================\n';
-  content += `Exported on : ${new Date().toLocaleString()}\n`;
-  content += 'Generated by Travel Planner CLI\n';
-  content += '============================================================\n';
-
-  fs.writeFileSync(filePath, content, 'utf8');
-  return filePath;
-}
-
-// Function to format and write the trip itinerary to a readable .txt file
-function performTripExport(trip) {
-  try {
-    ensureExportsDirectoryExists();
-
-    const filename = sanitizeFilename(trip.destination);
-
-    // If destination was changed and trip previously had an export with a different filename
-    if (trip.lastExportedFile && trip.lastExportedFile !== filename) {
-      const oldExportPath = path.join(EXPORTS_DIR, trip.lastExportedFile);
-      const isUsedByOtherTrip = trips.some(
-        (t) => t !== trip && sanitizeFilename(t.destination) === trip.lastExportedFile
-      );
-      if (fs.existsSync(oldExportPath) && !isUsedByOtherTrip) {
-        try {
-          fs.unlinkSync(oldExportPath);
-          console.log(`\n[Export Notice] Replaced previous export file "${trip.lastExportedFile}" with "${filename}".`);
-        } catch (e) {
-          // ignore cleanup error
-        }
-      }
-    }
-
-    // Ensure itinerary and budget estimates are strictly up to date
-    trip.itinerary = (trip.itinerary && trip.itinerary.length === trip.days)
-      ? trip.itinerary
-      : generateItinerary(trip);
-    trip.estimatedBudget = trip.estimatedBudget || calculateEstimatedBudget(trip.days);
-
-    const filePath = writeTripExportFile(trip, filename);
-
-    // Track the exported filename on the trip object and persist
-    trip.lastExportedFile = filename;
-    saveTrips();
-
-    console.log('\n========================================');
-    console.log('           EXPORT SUCCESSFUL!           ');
-    console.log('========================================');
-    console.log('Itinerary exported successfully using latest trip data!');
-    console.log(`Saved to : exports/${filename}`);
-    console.log(`Full path: ${filePath}`);
-    console.log(`Note     : Export filename is derived from the destination ("${trip.destination}").`);
-    console.log('========================================');
-
-    promptUser();
-  } catch (error) {
-    console.error(`\n[Export Error] Failed to export itinerary to file: ${error.message}\n`);
-    promptUser();
-  }
-}
-
 // Function to select and toggle an item's packed status
 function togglePackingItem() {
   if (packingItems.length === 0) {
@@ -802,6 +351,104 @@ function managePackingChecklist() {
   });
 }
 
+// Function to format and display all saved trips and their summaries
+function viewSavedTrips() {
+  console.log('\n========================================');
+  console.log('              SAVED TRIPS               ');
+  console.log('========================================');
+
+  if (trips.length === 0) {
+    console.log('No saved trips found.');
+    console.log('Use option 1 from the main menu to create a trip.');
+    console.log('========================================');
+    return;
+  }
+
+  const tripText = trips.length === 1 ? 'trip' : 'trips';
+  console.log(`  Total Saved : ${trips.length} ${tripText}`);
+  console.log('========================================');
+
+  trips.forEach((trip, index) => {
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    const formattedBudget = formatCurrency(trip.budget);
+    const estimatedTotal = trip.estimatedBudget ? formatCurrency(trip.estimatedBudget.total) : 'N/A';
+
+    console.log(`Trip #${index + 1}:`);
+    console.log(`  Destination          : ${trip.destination}`);
+    console.log(`  Duration             : ${trip.days} ${dayText}`);
+    console.log(`  Planned Budget       : ${formattedBudget}`);
+    console.log(`  Total Estimated Cost : ${estimatedTotal}`);
+    console.log(`  Interests            : ${trip.interests.join(', ')}`);
+    if (index < trips.length - 1) {
+      console.log('----------------------------------------');
+    }
+  });
+
+  console.log('========================================');
+}
+
+// Function to handle exporting a saved trip's itinerary to a text file
+function exportItinerary() {
+  console.log('\n========================================');
+  console.log('            EXPORT ITINERARY            ');
+  console.log('========================================');
+
+  if (trips.length === 0) {
+    console.log('No saved trips available to export.');
+    console.log('Use option 1 from the main menu to create a trip first.');
+    console.log('========================================');
+    return promptUser();
+  }
+
+  console.log('Available Trips:');
+  trips.forEach((trip, index) => {
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    console.log(`  ${index + 1}. ${trip.destination} (${trip.days} ${dayText})`);
+  });
+  console.log('========================================');
+
+  function promptTripSelection() {
+    rl.question(`Enter the trip number to export (1-${trips.length}) or 0 to cancel: `, (input) => {
+      const trimmed = input.trim();
+
+      if (trimmed === '0') {
+        console.log('\nExport cancelled. Returning to main menu.');
+        return promptUser();
+      }
+
+      const tripIndex = Number(trimmed);
+
+      if (!trimmed || !Number.isInteger(tripIndex) || tripIndex < 1 || tripIndex > trips.length) {
+        console.log(`Error: Please enter a valid trip number between 1 and ${trips.length}.`);
+        return promptTripSelection();
+      }
+
+      const selectedTrip = trips[tripIndex - 1];
+
+      try {
+        // Delegate export file creation, timestamping, and path resolution to tripService
+        const result = tripService.exportTripItinerary(selectedTrip);
+
+        console.log('\n========================================');
+        console.log('           EXPORT SUCCESSFUL!           ');
+        console.log('========================================');
+        console.log('Itinerary exported successfully using latest trip data!');
+        console.log(`Saved to : exports/${result.filename}`);
+        console.log(`Full path: ${result.filePath}`);
+        console.log(`Note     : Export filename is derived from the destination ("${selectedTrip.destination}").`);
+        console.log('========================================');
+
+        promptUser();
+      } catch (error) {
+        console.error(`\n[Export Error] Failed to export itinerary to file: ${error.message}\n`);
+        promptUser();
+      }
+    });
+  }
+
+  promptTripSelection();
+}
+
 // Function to display the Manage Trips submenu options
 function displayManageTripsMenu() {
   console.log('\n=============================');
@@ -846,7 +493,6 @@ function editTrip() {
   console.log('               EDIT TRIP                ');
   console.log('========================================');
 
-  // Handle case where no trips exist
   if (trips.length === 0) {
     console.log('No saved trips available to edit.');
     console.log('Use option 1 from the main menu to create a trip first.');
@@ -890,16 +536,9 @@ function promptEditDetails(trip) {
   console.log(`\n--- Editing Trip: ${trip.destination} ---`);
   console.log('Press Enter to keep the current value shown in brackets.\n');
 
-  // Track old destination and potential previous export file before edits
-  const oldDestination = trip.destination;
-  const previousExportFilename = trip.lastExportedFile || sanitizeFilename(oldDestination);
-  const previousExportPath = path.join(EXPORTS_DIR, previousExportFilename);
-  const hadPreviousExport = fs.existsSync(previousExportPath);
-
   // Step 1: Destination
   function askDestination() {
     rl.question(`Enter destination [Current: ${trip.destination}]: `, (input) => {
-      // If user pressed Enter directly, keep existing value
       if (input === '') {
         return askDays(trip.destination);
       }
@@ -975,60 +614,27 @@ function promptEditDetails(trip) {
         finalInterests = interests;
       }
 
-      // Update the trip object fields
-      trip.destination = newDestination;
-      trip.days = newDays;
-      trip.budget = newBudget;
-      trip.interests = finalInterests;
+      // Find the index of the trip being edited
+      const tripIndex = trips.indexOf(trip);
 
-      // Regenerate day-by-day itinerary and recalculate budget estimates
-      trip.itinerary = generateItinerary(trip);
-      trip.estimatedBudget = calculateEstimatedBudget(trip.days);
-
-      // Handle synchronizing with any existing export file
-      let exportSyncNote = null;
-      if (hadPreviousExport) {
-        const newExportFilename = sanitizeFilename(newDestination);
-        const newExportPath = path.join(EXPORTS_DIR, newExportFilename);
-
-        // If destination changed, safely clean up the old file if no other trip uses it
-        if (newExportFilename !== previousExportFilename) {
-          const isUsedByOtherTrip = trips.some(
-            (t) => t !== trip && sanitizeFilename(t.destination) === previousExportFilename
-          );
-          if (!isUsedByOtherTrip && fs.existsSync(previousExportPath)) {
-            try {
-              fs.unlinkSync(previousExportPath);
-            } catch (e) {
-              // ignore
-            }
-          }
-          exportSyncNote = `[Export Synced] Renamed and updated export file to: exports/${newExportFilename}`;
-        } else {
-          exportSyncNote = `[Export Synced] Automatically updated existing file: exports/${newExportFilename}`;
-        }
-
-        // Rewrite the export file with latest data immediately so it remains in sync
-        writeTripExportFile(trip, newExportFilename);
-        trip.lastExportedFile = newExportFilename;
-      } else {
-        const targetFilename = sanitizeFilename(newDestination);
-        exportSyncNote = `[Export Note] Export filename will be "exports/${targetFilename}" when exported.`;
-      }
-
-      // Persist the updated trip to data/trips.json
-      saveTrips();
+      // Delegate update, itinerary regeneration, budget recalculation, and export sync to tripService
+      const { trip: updatedTrip, exportSyncNote } = tripService.updateTrip(tripIndex, {
+        destination: newDestination,
+        days: newDays,
+        budget: newBudget,
+        interests: finalInterests,
+      });
 
       // Display success confirmation, updated summary, itinerary, and budget breakdown
       console.log('\n========================================');
       console.log('       TRIP UPDATED SUCCESSFULLY!       ');
       console.log('========================================');
-      displayTripSummary(trip, 'Trip details updated successfully!');
+      displayTripSummary(updatedTrip, 'Trip details updated successfully!');
       if (exportSyncNote) {
         console.log(exportSyncNote);
       }
-      displayItinerary(trip);
-      displayBudgetBreakdown(trip);
+      displayItinerary(updatedTrip);
+      displayBudgetBreakdown(updatedTrip);
 
       manageTrips();
     });
@@ -1043,7 +649,6 @@ function deleteTrip() {
   console.log('              DELETE TRIP               ');
   console.log('========================================');
 
-  // Handle case where no trips exist
   if (trips.length === 0) {
     console.log('No saved trips available to delete.');
     console.log('Use option 1 from the main menu to create a trip first.');
@@ -1085,8 +690,8 @@ function deleteTrip() {
       const answer = input.trim().toLowerCase();
 
       if (answer === 'yes') {
-        const removedTrip = trips.splice(index, 1)[0];
-        saveTrips();
+        // Delegate deletion and saving to tripService (exported files are preserved)
+        const removedTrip = tripService.deleteTrip(index);
 
         console.log('\n========================================');
         console.log('       TRIP DELETED SUCCESSFULLY!       ');
@@ -1154,12 +759,10 @@ rl.on('close', () => {
 // Initial startup greeting and menu launch
 console.log('Welcome to Travel Planner CLI!');
 
-// Load saved trips from persistent JSON storage at startup
-const savedTrips = loadTrips();
-trips.push(...savedTrips);
+// Load saved trips from persistent JSON storage at startup via tripService
+const savedTrips = tripService.loadTrips();
 if (savedTrips.length > 0) {
   console.log(`Loaded ${savedTrips.length} saved ${savedTrips.length === 1 ? 'trip' : 'trips'} from storage.`);
 }
 
 promptUser();
-
