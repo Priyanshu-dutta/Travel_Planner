@@ -19,7 +19,7 @@ The project will be built incrementally and will include the following capabilit
 - **Budget Calculation (Implemented in Commit 7):** Track estimated expenses across transport, lodging, food, and activities, and compare against user's planned budget.
 - **Packing Checklist (Implemented in Commit 8):** Create and manage customized packing lists, track packed/unpacked status, and monitor preparation progress.
 - **Saving & Viewing Trips (Implemented in Commit 9):** Store trips locally in a JSON file, load previous trips on startup, and view all saved trip summaries.
-- **Exporting Itineraries:** Export generated itineraries into readable plain text (`.txt`) files.
+- **Exporting Itineraries (Implemented in Commit 10):** Export generated itineraries into readable plain text (`.txt`) files inside a dedicated `exports/` directory.
 
 ---
 
@@ -76,6 +76,18 @@ The application provides local file-based persistent storage using Node.js built
 
 ---
 
+## 📄 Exporting Itineraries
+
+The application allows users to export any saved trip's itinerary into a readable `.txt` file:
+
+- **Menu Option:** Choose Option 4 ("Export Itinerary") from the main menu.
+- **Trip Selection:** Lists all available saved trips with index numbers and duration. Users select a trip by its number or enter `0` to cancel.
+- **Export Directory:** Output files are automatically saved in the `exports/` directory, which is created automatically if it doesn't already exist.
+- **Sanitized Filenames:** Filenames are automatically sanitized based on the destination name (e.g. `goa_itinerary.txt`, `new_york_itinerary.txt`), removing any characters invalid for filesystems.
+- **File Content:** The generated text document includes the trip destination, duration, planned budget, estimated costs, interests, and the complete morning, afternoon, and evening daily schedule.
+
+---
+
 ## 🛠️ Technology Stack
 
 - **Language:** JavaScript (ES6+)
@@ -122,6 +134,7 @@ node -v
 Travel Planner/
 ├── data/
 │   └── trips.json     # Saved trip data (auto-generated)
+├── exports/           # Exported plain text itineraries (.txt)
 ├── src/
 │   └── index.js       # Main application entry point
 ├── .gitignore         # Files and directories ignored by Git

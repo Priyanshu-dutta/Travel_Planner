@@ -9,9 +9,10 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-// Storage paths for persistent JSON trip data
+// Storage paths for persistent JSON trip data and itinerary text exports
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const TRIPS_FILE_PATH = path.join(DATA_DIR, 'trips.json');
+const EXPORTS_DIR = path.join(__dirname, '..', 'exports');
 
 // In-memory storage for trips created during or loaded into the application session
 const trips = [];
@@ -27,6 +28,26 @@ function ensureDataDirectoryExists() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
+}
+
+// Helper function to ensure the exports directory exists
+function ensureExportsDirectoryExists() {
+  if (!fs.existsSync(EXPORTS_DIR)) {
+    fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+  }
+}
+
+// Helper function to generate a safe, sanitized filename from a destination string
+function sanitizeFilename(destination) {
+  const safeName = destination
+    .trim()
+    .toLowerCase()
+    .replace(/[/\\?%*:|"<>]/g, '_')
+    .replace(/[^a-z0-9_-]/gi, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+
+  return `${safeName || 'trip'}_itinerary.txt`;
 }
 
 // Function to safely load saved trips from local JSON file
@@ -91,7 +112,8 @@ function displayMenu() {
   console.log('1. Create a Trip');
   console.log('2. View Saved Trips');
   console.log('3. Packing Checklist');
-  console.log('4. Exit');
+  console.log('4. Export Itinerary');
+  console.log('5. Exit');
   console.log('=============================');
 }
 
@@ -569,6 +591,107 @@ function viewSavedTrips() {
   console.log('========================================');
 }
 
+// Function to handle exporting a saved trip's itinerary to a text file
+function exportItinerary() {
+  console.log('\n========================================');
+  console.log('            EXPORT ITINERARY            ');
+  console.log('========================================');
+
+  // Check if there are saved trips to export
+  if (trips.length === 0) {
+    console.log('No saved trips available to export.');
+    console.log('Use option 1 from the main menu to create a trip first.');
+    console.log('========================================');
+    return promptUser();
+  }
+
+  console.log('Available Trips:');
+  trips.forEach((trip, index) => {
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    console.log(`  ${index + 1}. ${trip.destination} (${trip.days} ${dayText})`);
+  });
+  console.log('========================================');
+
+  function promptTripSelection() {
+    rl.question(`Enter the trip number to export (1-${trips.length}) or 0 to cancel: `, (input) => {
+      const trimmed = input.trim();
+
+      if (trimmed === '0') {
+        console.log('\nExport cancelled. Returning to main menu.');
+        return promptUser();
+      }
+
+      const tripIndex = Number(trimmed);
+
+      if (!trimmed || !Number.isInteger(tripIndex) || tripIndex < 1 || tripIndex > trips.length) {
+        console.log(`Error: Please enter a valid trip number between 1 and ${trips.length}.`);
+        return promptTripSelection();
+      }
+
+      const selectedTrip = trips[tripIndex - 1];
+      performTripExport(selectedTrip);
+    });
+  }
+
+  promptTripSelection();
+}
+
+// Function to format and write the trip itinerary to a readable .txt file
+function performTripExport(trip) {
+  try {
+    ensureExportsDirectoryExists();
+
+    const filename = sanitizeFilename(trip.destination);
+    const filePath = path.join(EXPORTS_DIR, filename);
+
+    const dayText = trip.days === 1 ? 'day' : 'days';
+    const formattedBudget = formatCurrency(trip.budget);
+    const itinerary = trip.itinerary && trip.itinerary.length > 0 ? trip.itinerary : generateItinerary(trip);
+
+    // Build the text content for the exported itinerary file
+    let content = '';
+    content += '============================================================\n';
+    content += '                     TRIP ITINERARY                         \n';
+    content += '============================================================\n';
+    content += `Destination    : ${trip.destination}\n`;
+    content += `Duration       : ${trip.days} ${dayText}\n`;
+    content += `Planned Budget : ${formattedBudget}\n`;
+    if (trip.estimatedBudget) {
+      content += `Estimated Cost : ${formatCurrency(trip.estimatedBudget.total)}\n`;
+    }
+    content += `Interests      : ${trip.interests.join(', ')}\n`;
+    content += '============================================================\n\n';
+    content += 'DAY-BY-DAY ITINERARY:\n\n';
+
+    itinerary.forEach((item) => {
+      content += `Day ${item.day}:\n`;
+      content += `  - Morning   : ${item.morning}\n`;
+      content += `  - Afternoon : ${item.afternoon}\n`;
+      content += `  - Evening   : ${item.evening}\n\n`;
+    });
+
+    content += '============================================================\n';
+    content += `Exported on : ${new Date().toLocaleString()}\n`;
+    content += 'Generated by Travel Planner CLI\n';
+    content += '============================================================\n';
+
+    fs.writeFileSync(filePath, content, 'utf8');
+
+    console.log('\n========================================');
+    console.log('           EXPORT SUCCESSFUL!           ');
+    console.log('========================================');
+    console.log('Itinerary exported successfully!');
+    console.log(`Saved to : exports/${filename}`);
+    console.log(`Full path: ${filePath}`);
+    console.log('========================================');
+
+    promptUser();
+  } catch (error) {
+    console.error(`\n[Export Error] Failed to export itinerary to file: ${error.message}\n`);
+    promptUser();
+  }
+}
+
 // Function to select and toggle an item's packed status
 function togglePackingItem() {
   if (packingItems.length === 0) {
@@ -639,7 +762,7 @@ function managePackingChecklist() {
 // Function to prompt the user for input and route their choice
 function promptUser() {
   displayMenu();
-  rl.question('Please enter your choice (1-4): ', (input) => {
+  rl.question('Please enter your choice (1-5): ', (input) => {
     const choice = input.trim();
 
     switch (choice) {
@@ -657,12 +780,16 @@ function promptUser() {
         break;
 
       case '4':
+        exportItinerary();
+        break;
+
+      case '5':
         console.log('\nThank you for using Travel Planner CLI. Goodbye!');
         rl.close();
         break;
 
       default:
-        console.log('\nInvalid choice. Please enter a number between 1 and 4.');
+        console.log('\nInvalid choice. Please enter a number between 1 and 5.');
         promptUser();
         break;
     }

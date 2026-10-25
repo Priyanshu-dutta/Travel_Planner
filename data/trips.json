@@ -1,1 +1,31 @@
-[]
+[
+  {
+    "destination": "kashmir",
+    "days": 2,
+    "budget": 100000,
+    "interests": [
+      "nature"
+    ],
+    "itinerary": [
+      {
+        "day": 1,
+        "morning": "Visit a park, scenic viewpoint, or nature spot in kashmir.",
+        "afternoon": "Explore a nature trail, scenic lake, or green space in kashmir.",
+        "evening": "Relax and watch the sunset from a scenic nature viewpoint in kashmir."
+      },
+      {
+        "day": 2,
+        "morning": "Take a peaceful morning walk through a botanical garden or park in kashmir.",
+        "afternoon": "Visit a popular nature reserve or scenic viewpoint in kashmir.",
+        "evening": "Enjoy a tranquil twilight stroll along a scenic waterfront or park in kashmir."
+      }
+    ],
+    "estimatedBudget": {
+      "transport": 2000,
+      "accommodation": 3000,
+      "food": 2000,
+      "activities": 1000,
+      "total": 8000
+    }
+  }
+]
